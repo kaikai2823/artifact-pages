@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local Artifact 功能与实现总结</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @custom-variant dark (&:where(.dark, .dark *));
+    @theme {
+      --color-accent: #6366f1;
+      --radius-card: 0.875rem;
+    }
+  </style>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    html { color-scheme: light dark; scroll-behavior: smooth; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif; }
+    .tabular { font-variant-numeric: tabular-nums; }
+    .anchor { scroll-margin-top: 5rem; }
+    /* sidebar active link */
+    .toc-link.active { color: var(--color-accent); font-weight: 600; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased">
+
+  <!-- Top bar -->
+  <header class="sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-accent)] text-white text-sm" id="emoji">📦</span>
+        <span id="title" class="font-semibold truncate">Local Artifact 功能与实现总结</span>
+        <span id="version" class="text-xs text-slate-400 shrink-0"></span>
+      </div>
+      <button id="themeToggle" type="button" aria-label="Toggle dark mode"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+        <i data-lucide="moon" class="h-4 w-4 dark:hidden"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Layout: sidebar + main -->
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex gap-8">
+    <!-- Sidebar TOC -->
+    <aside class="hidden lg:block w-52 shrink-0">
+      <nav id="toc" class="sticky top-20 space-y-1 text-sm"></nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="min-w-0 flex-1">
+
+      <!-- Hero -->
+      <section class="mb-12 anchor" id="overview">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 px-3 py-1 text-xs font-medium mb-4">
+          <i data-lucide="sparkles" class="h-3.5 w-3.5"></i> ZCode Skill · 本地化 Artifact
+        </span>
+        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">Local Artifact 功能与实现总结</h1>
+        <p class="mt-3 text-base text-slate-600 dark:text-slate-300 max-w-2xl">
+          一个将对话中的工作"捕获"为单文件、可在浏览器直接打开的交互式页面 —— Claude Code
+          <code class="text-xs bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5">artifact</code>
+          功能的本地、离线等价实现。无需云端托管、无需后端、无需构建步骤。
+        </p>
+        <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3" id="kpis"></div>
+      </section>
+
+      <!-- What is artifact -->
+      <section class="mb-12 anchor" id="what">
+        <h2 class="flex items-center gap-2 text-xl font-bold mb-4"><i data-lucide="lightbulb" class="h-5 w-5 text-[var(--color-accent)]"></i>什么是 Artifact</h2>
+        <div class="rounded-[var(--radius-card)] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
+          <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            官方定义：<strong class="text-slate-900 dark:text-white">"an artifact is a capture of work, not an application"</strong>
+            —— 它是对一份工作的"快照捕获"，而不是一个真正的应用。它没有后端、没有跨刷新的持久化、表单提交不会发送到任何地方。
+          </p>
+          <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300 mt-3">
+            一切（标记、样式、脚本、数据）都内嵌在<strong>一个文件</strong>里，用户双击就能从
+            <code class="text-xs bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5">file://</code>
+            打开。这正是 Claude Code 第 25 周（2026-06-15）推出的 artifacts 功能的本地、离线版本。
+          </p>
+          <div class="mt-4 grid sm:grid-cols-2 gap-3">
+            <div class="rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 p-3">
+              <p class="text-xs font-semibold text-rose-700 dark:text-rose-300 mb-1.5">❌ 不做什么（约束）</p>
+              <ul class="text-xs text-rose-600/90 dark:text-rose-300/80 space-y-1">
+                <li>· 不调用任何远程 API</li>
+                <li>· 不依赖服务器 / 后端状态</li>
+                <li>· 不拆分成多个 CSS/JS 文件</li>
+                <li>· 渲染体积不超过 16 MiB</li>
+              </ul>
+            </div>
+            <div class="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 p-3">
+              <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 mb-1.5">✓ 做什么（能力）</p>
+              <ul class="text-xs text-emerald-700/90 dark:text-emerald-300/80 space-y-1">
+                <li>· 单文件自包含、双击即开</li>
+                <li>· 数据硬编码为顶部 JSON</li>
+                <li>· 深色/浅色双主题</li>
+                <li>· 就地更新 + 版本管理</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Three modes -->
+      <section class="mb-12 anchor" id="modes">
+        <h2 class="flex items-center gap-2 text-xl font-bold mb-4"><i data-lucide="layers" class="h-5 w-5 text-[var(--color-accent)]"></i>三种模式（三个维度）</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">官方 artifacts 有"模式"概念，本 skill 沿三个轴显式解析，写入前先选好。</p>
+        <div class="space-y-4" id="modesContainer"></div>
+      </section>
+
+      <!-- Archetypes -->
+      <section class="mb-12 anchor" id="archetypes">
+        <h2 class="flex items-center gap-2 text-xl font-bold mb-4"><i data-lucide="layout-grid" class="h-5 w-5 text-[var(--color-accent)]"></i>七种原型模板</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">覆盖 Claude Code 官方五种"提问模式" + 时间轴 / 架构图，每种都有完整可运行的模板。</p>
+        <div class="grid sm:grid-cols-2 gap-4" id="archetypesContainer"></div>
+      </section>
+
+      <!-- Changelog -->
+      <section class="mb-12 anchor" id="changelog">
+        <h2 class="flex items-center gap-2 text-xl font-bold mb-4"><i data-lucide="git-branch" class="h-5 w-5 text-[var(--color-accent)]"></i>实现演进（四轮迭代）</h2>
+        <ol class="relative border-l border-slate-200 dark:border-slate-800 ml-3 space-y-6" id="changelogContainer"></ol>
+      </section>
+
+      <!-- Test results -->
+      <section class="mb-12 anchor" id="tests">
+        <h2 class="flex items-center gap-2 text-xl font-bold mb-4"><i data-lucide="shield-check" class="h-5 w-5 text-[var(--color-accent)]"></i>端到端测试验证</h2>
+        <div class="rounded-[var(--radius-card)] border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 p-5">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white"><i data-lucide="check" class="h-5 w-5"></i></span>
+            <div>
+              <p class="font-semibold text-emerald-800 dark:text-emerald-200">27 / 27 全部通过</p>
+              <p class="text-xs text-emerald-700 dark:text-emerald-300">jsdom 加载真实模板 · 运行脚本 · 模拟真实 DOM 交互</p>
+            </div>
+          </div>
+          <div class="space-y-2" id="testGroups"></div>
+        </div>
+        <p class="text-xs text-slate-400 mt-3">运行：<code class="bg-slate-100 dark:bg-slate-800 rounded px-1.5 py-0.5">cd ~/.agents/skills/local-artifact && node tests/run.js</code></p>
+      </section>
+
+      <!-- Footer -->
+      <footer class="border-t border-slate-200 dark:border-slate-800 pt-6 text-xs text-slate-400">
+        <p id="footer"></p>
+      </footer>
+
+    </main>
+  </div>
+
+  <script>
+    // ============================================================
+    // ARTIFACT META — powers header + lifecycle.
+    // ============================================================
+    const ARTIFACT_META = {
+      title: "Local Artifact 功能与实现总结",
+      emoji: "📦",
+      version: 1,
+      createdAt: "2026-06-28T00:00:00",
+      updatedAt: "2026-06-28T00:00:00"
+    };
+
+    // ============================================================
+    // ARTIFACT DATA — edit this block to refresh the page.
+    // ============================================================
+    const ARTIFACT_DATA = {
+      kpis: [
+        { label: "原型模板", value: "7" },
+        { label: "支持模式", value: "3 轴" },
+        { label: "测试用例", value: "27" },
+        { label: "文件总数", value: "15" }
+      ],
+      modes: [
+        {
+          axis: "Axis 1 · 依赖模式",
+          icon: "package",
+          opts: [
+            { name: "CDN（默认）", desc: "Tailwind / Lucide / Mermaid 走 CDN，首屏加载。体积小、易读。适合联网本地打开。", tag: "default" },
+            { name: "Offline（全内联）", desc: "编译后的 CSS + 内联 SVG 全部内嵌，拔网线也能开。对应官方严格 CSP。", tag: "offline" }
+          ]
+        },
+        {
+          axis: "Axis 2 · 输出模式",
+          icon: "file-type",
+          opts: [
+            { name: ".html（默认）", desc: "交互式页面 —— 所有原型的标准产物。", tag: "default" },
+            { name: ".md", desc: "文档型产物（报告 / 规范 / 会议纪要），既是合法 Markdown 又能渲染为 HTML。", tag: "doc" }
+          ]
+        },
+        {
+          axis: "Axis 3 · 生命周期模式",
+          icon: "refresh-cw",
+          opts: [
+            { name: "Create", desc: "首次请求，写新文件，version = 1。", tag: "create" },
+            { name: "Update", desc: "「更新 / 刷新 / 加上新数据」→ 覆盖同一路径，version +1，createdAt 不变。镜像官方『就地更新』。", tag: "update" }
+          ]
+        }
+      ],
+      archetypes: [
+        { emoji: "🔀", name: "Diff Viewer",      pattern: "模式1", desc: "浏览变更。统一/分屏切换、语法高亮增删行、多文件折叠。", file: "diff-viewer.md" },
+        { emoji: "⚖️", name: "Alternatives Compare", pattern: "模式2", desc: "比较方案。卡片 + 加权权衡矩阵 + 推荐横幅。", file: "alternatives-compare.md" },
+        { emoji: "🎛️", name: "Interactive Controls", pattern: "模式3", desc: "调参。滑块驱动实时预览 + 生成输出串。", file: "interactive-controls.md" },
+        { emoji: "🗂️", name: "Kanban Board",     pattern: "模式4", desc: "带回会话。拖拽卡片 + 键盘移动 + 复制为提示词。", file: "kanban-board.md" },
+        { emoji: "✅", name: "Progress Checklist",pattern: "模式5", desc: "追踪进度。分组项 + 完成度条 + 剩余工作提示词。", file: "progress-checklist.md" },
+        { emoji: "🧭", name: "Timeline Explorer",pattern: "通用",  desc: "日志/事件时间轴。级别筛选 + 搜索 + 可折叠详情。", file: "timeline-explorer.md" },
+        { emoji: "🗺️", name: "Architecture Canvas",pattern:"通用", desc: "架构图。Mermaid 图 + 组件表 + 缩放平移。", file: "architecture-canvas.md" }
+      ],
+      changelog: [
+        {
+          ver: "v1 · 基础版", color: "bg-sky-500",
+          title: "骨架搭建",
+          items: ["SKILL.md + base-template.html", "三个原型：Timeline / Diff / Architecture", "CDN 模式、深色优先、内嵌 JSON"]
+        },
+        {
+          ver: "v2 · 对齐官方", color: "bg-indigo-500",
+          title: "对齐 Claude Code artifacts 功能",
+          items: ["调研官方文档：5 种提问模式", "新增 Alternatives / Controls / Progress 原型", "设计系统检测（prompt > project > skill）", "emoji favicon、16 MiB 上限、体积优化"]
+        },
+        {
+          ver: "v3 · 模式化", color: "bg-violet-500",
+          title: "支持多种模式 + 就地更新",
+          items: ["正式三种模式轴：依赖 × 输出 × 生命周期", "新增 Kanban（模式4 旗舰）+ Artifact Lifecycle 文档", "ARTIFACT_META 块（version/createdAt/updatedAt）", "Update 模式：同路径覆盖、版本递增"]
+        },
+        {
+          ver: "v4 · 验证与加固", color: "bg-emerald-500",
+          title: "端到端测试 + 修复真实 bug",
+          items: ["jsdom 测试套件：27 用例全绿", "修复：8 个模板的 localStorage 非防御性崩溃", "修复：3 个原型补齐 emoji favicon", "修复：离线转换需剥离全部外部脚本", "SKILL.md 新增 Verification 章节"]
+        }
+      ],
+      testGroups: [
+        { name: "模式：Create + CDN + .html", count: 2 },
+        { name: "模式：Update（就地版本递增）", count: 1 },
+        { name: "模式：Offline（零 CDN 请求）", count: 2 },
+        { name: "模式：.md 输出", count: 1 },
+        { name: "七种原型渲染", count: 7 },
+        { name: "行为交互（筛选/搜索/拖拽/复制）", count: 7 },
+        { name: "跨切面特性（favicon/主题/降级）", count: 5 },
+        { name: "SKILL.md 一致性", count: 2 }
+      ]
+    };
+
+    const SECTIONS = [
+      { id: "overview",   label: "概览" },
+      { id: "what",       label: "什么是 Artifact" },
+      { id: "modes",      label: "三种模式" },
+      { id: "archetypes", label: "七种原型" },
+      { id: "changelog",  label: "实现演进" },
+      { id: "tests",      label: "测试验证" }
+    ];
+
+    // ---- Theme (defensive) ----
+    function safeStore(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
+    (function () { try { if (safeStore("artifact-theme") === "light") document.documentElement.classList.remove("dark"); } catch {} })();
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      safeStore("artifact-theme", isDark ? "dark" : "light");
+    });
+
+    // ---- Header ----
+    document.getElementById("title").textContent = ARTIFACT_META.title;
+    document.getElementById("emoji").textContent = ARTIFACT_META.emoji;
+    document.getElementById("version").textContent = "v" + ARTIFACT_META.version;
+
+    // ---- KPIs ----
+    document.getElementById("kpis").innerHTML = ARTIFACT_DATA.kpis.map(k => `
+      <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm">
+        <p class="text-2xl font-bold tabular text-[var(--color-accent)]">${k.value}</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">${k.label}</p>
+      </div>`).join("");
+
+    // ---- TOC + active highlight ----
+    const toc = document.getElementById("toc");
+    toc.innerHTML = SECTIONS.map(s => `<a href="#${s.id}" class="toc-link block py-1.5 text-slate-500 dark:text-slate-400 hover:text-[var(--color-accent)] transition" data-toc="${s.id}">${s.label}</a>`).join("");
+    // IntersectionObserver is an enhancement; guard it so older engines still render fine.
+    if (typeof IntersectionObserver !== "undefined") {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            document.querySelectorAll(".toc-link").forEach(a => a.classList.toggle("active", a.dataset.toc === e.target.id));
+          }
+        });
+      }, { rootMargin: "-30% 0px -60% 0px" });
+      SECTIONS.forEach(s => { const el = document.getElementById(s.id); if (el) observer.observe(el); });
+    }
+
+    // ---- Modes ----
+    document.getElementById("modesContainer").innerHTML = ARTIFACT_DATA.modes.map(m => `
+      <div class="rounded-[var(--radius-card)] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-5">
+        <h3 class="flex items-center gap-2 font-semibold mb-3"><i data-lucide="${m.icon}" class="h-4 w-4 text-[var(--color-accent)]"></i>${m.axis}</h3>
+        <div class="grid sm:grid-cols-2 gap-3">
+          ${m.opts.map(o => `
+            <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="font-medium text-sm">${o.name}</span>
+                <span class="text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 ${tagClr(o.tag)}">${o.tag}</span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">${o.desc}</p>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+
+    function tagClr(t) {
+      return ({ default:"bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+                offline:"bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+                doc:"bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+                create:"bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+                update:"bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300" })[t];
+    }
+
+    // ---- Archetypes ----
+    document.getElementById("archetypesContainer").innerHTML = ARTIFACT_DATA.archetypes.map(a => `
+      <div class="rounded-[var(--radius-card)] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4 hover:border-[var(--color-accent)] transition">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-xl">${a.emoji}</span>
+          <h3 class="font-semibold">${a.name}</h3>
+          <span class="ml-auto text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">${a.pattern}</span>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">${a.desc}</p>
+        <p class="text-[11px] text-slate-400 mt-2 font-mono">→ ${a.file}</p>
+      </div>`).join("");
+
+    // ---- Changelog ----
+    document.getElementById("changelogContainer").innerHTML = ARTIFACT_DATA.changelog.map(c => `
+      <li class="relative pl-6">
+        <span class="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-slate-50 dark:ring-slate-950 ${c.color}"></span>
+        <p class="font-semibold text-sm">${c.ver}</p>
+        <p class="text-xs text-[var(--color-accent)] font-medium mb-2">${c.title}</p>
+        <ul class="space-y-1">${c.items.map(i => `<li class="text-xs text-slate-600 dark:text-slate-300 flex gap-1.5"><i data-lucide="check" class="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-500"></i>${i}</li>`).join("")}</ul>
+      </li>`).join("");
+
+    // ---- Test groups ----
+    document.getElementById("testGroups").innerHTML = ARTIFACT_DATA.testGroups.map(g => `
+      <div class="flex items-center justify-between rounded-lg bg-white/60 dark:bg-slate-900/40 px-3 py-2">
+        <span class="text-xs text-slate-600 dark:text-slate-300">${g.name}</span>
+        <span class="inline-flex items-center gap-1 text-xs font-semibold tabular text-emerald-600 dark:text-emerald-400">
+          <i data-lucide="check-circle-2" class="h-3.5 w-3.5"></i>${g.count}
+        </span>
+      </div>`).join("");
+
+    document.getElementById("footer").textContent =
+      "由 local-artifact skill 生成 · " + new Date(ARTIFACT_META.updatedAt).toLocaleDateString() + " · 本地自包含页面，双击即可打开";
+
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
