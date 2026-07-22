@@ -22,8 +22,6 @@
     html:not(.dark) body {
       background: radial-gradient(ellipse at top, #eef2ff 0%, #f8fafc 45%, #ffffff 100%);
     }
-
-    /* 玻璃态卡片 */
     .glass {
       background: rgba(255, 255, 255, 0.04);
       backdrop-filter: blur(16px);
@@ -35,8 +33,6 @@
       border: 1px solid rgba(15, 23, 42, 0.06);
       box-shadow: 0 4px 24px -8px rgba(15, 23, 42, 0.08);
     }
-
-    /* 标签页 */
     .tab-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
     .tab-active {
       background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -44,38 +40,31 @@
       border-color: transparent !important;
       box-shadow: 0 4px 14px -2px rgba(99, 102, 241, 0.5);
     }
-
-    /* 卡片入场动画 */
     .fade-up { opacity: 0; transform: translateY(16px); }
     .fade-up.show { opacity: 1; transform: translateY(0); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
 
     /* D3 架构图样式 */
-    #arch-svg { width: 100%; height: 100%; display: block; }
-    .arch-layer-bg { rx: 14; }
-    .arch-layer-label { font-weight: 600; font-size: 13px; }
+    #arch-svg { width: 100%; height: 100%; display: block; cursor: grab; }
+    #arch-svg:active { cursor: grabbing; }
     .arch-node-group { cursor: pointer; }
-    .arch-node-circle { transition: all 0.2s ease; }
-    .arch-node-group:hover .arch-node-circle { filter: brightness(1.25) drop-shadow(0 0 8px currentColor); }
+    .arch-node-outer { transition: all 0.25s ease; }
+    .arch-node-group:hover .arch-node-outer { filter: brightness(1.3); }
     .arch-node-label { font-size: 11px; font-weight: 500; pointer-events: none; text-anchor: middle; }
-    .arch-node-icon { font-size: 16px; text-anchor: middle; pointer-events: none; }
-    .arch-link { fill: none; stroke-opacity: 0.4; }
-    .arch-link.highlighted { stroke-opacity: 0.9; stroke-width: 2.5; }
-    .arch-link.dimmed { stroke-opacity: 0.08; }
-    .arch-node-group.dimmed { opacity: 0.25; }
-
-    /* tooltip */
+    .arch-node-sub { font-size: 8.5px; pointer-events: none; text-anchor: middle; }
+    .arch-node-icon { font-size: 17px; text-anchor: middle; pointer-events: none; }
+    .arch-link { fill: none; transition: stroke-opacity 0.25s ease, stroke-width 0.25s ease; }
+    .arch-link.dimmed { stroke-opacity: 0.06 !important; }
+    .arch-node-group.dimmed { opacity: 0.2; }
+    .arch-zone-label { font-weight: 700; font-size: 11px; letter-spacing: 1px; }
+    .arch-step { font-size: 10px; font-weight: 700; }
     #arch-tooltip {
       position: absolute; pointer-events: none; opacity: 0;
-      transition: opacity 0.15s ease; z-index: 50; max-width: 260px;
+      transition: opacity 0.15s ease; z-index: 50; max-width: 280px;
     }
-
-    /* 滚动条美化 */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
-
-    /* 代码块 */
     .code-block {
       font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
       background: rgba(2, 6, 23, 0.5);
@@ -92,7 +81,7 @@
           <i data-lucide="network" class="h-4 w-4"></i>
         </span>
         <div class="min-w-0">
-          <div id="title" class="font-semibold truncate text-sm">架构演进：从 Framework 到 Harness</div>
+          <div class="font-semibold truncate text-sm">架构演进：从 Framework 到 Harness</div>
           <div class="text-[10px] text-slate-400">kaiclaw · 第一讲</div>
         </div>
         <span id="version" class="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"></span>
@@ -119,7 +108,7 @@
     <!-- 标签页 -->
     <div class="mb-6 flex flex-wrap gap-2 fade-up">
       <button data-tab="architecture" class="tab-btn tab-active inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10">
-        <i data-lucide="git-fork" class="h-3.5 w-3.5"></i>四层架构蓝图
+        <i data-lucide="git-fork" class="h-3.5 w-3.5"></i>架构与数据流
       </button>
       <button data-tab="compare" class="tab-btn inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10 text-slate-300 hover:bg-white/5">
         <i data-lucide="scale" class="h-3.5 w-3.5"></i>Framework vs Harness
@@ -135,14 +124,30 @@
       </button>
     </div>
 
-    <!-- TAB 1: D3 架构图 -->
+    <!-- TAB 1: D3 架构图（中心辐射式） -->
     <section id="tab-architecture" class="tab-panel">
+      <!-- 数据流叙事说明 -->
+      <div class="mb-4 glass rounded-2xl px-5 py-3 fade-up">
+        <div class="flex items-start gap-2 text-xs text-slate-300 dark:text-slate-300 leading-relaxed">
+          <i data-lucide="info" class="h-4 w-4 text-indigo-400 mt-0.5 flex-shrink-0"></i>
+          <div>
+            <span class="font-medium text-indigo-300">读图逻辑：</span>
+            Main Loop 是 <span class="text-rose-400 font-medium">心脏</span>，驱动一个不间断的 ReAct 回路 ——
+            <span class="text-indigo-300">① 入口输入</span> →
+            <span class="text-violet-300">② 调用大模型推理</span> →
+            <span class="text-amber-300">③ 管理上下文</span> →
+            <span class="text-emerald-300">④ 执行工具</span> →
+            <span class="text-violet-300">⑤ 改变物理世界</span> →
+            <span class="text-amber-300">⑥ 观察回写</span>，循环往复。
+            <span class="text-slate-400">悬停节点看关联 · 点击锁定 · 拖拽重排 · 滚轮缩放</span>
+          </div>
+        </div>
+      </div>
       <div class="glass rounded-2xl overflow-hidden fade-up">
         <div class="flex items-center justify-between px-5 py-3 border-b border-white/5">
           <div class="flex items-center gap-2">
             <i data-lucide="git-fork" class="h-4 w-4 text-indigo-400"></i>
-            <span class="text-sm font-medium">go-tiny-claw 四层架构（D3 交互式）</span>
-            <span class="text-[10px] text-slate-500 hidden sm:inline">悬停高亮 · 点击锁定 · 拖拽节点</span>
+            <span class="text-sm font-medium">go-tiny-claw 运行时架构（中心辐射式）</span>
           </div>
           <div class="flex items-center gap-1">
             <button id="zout" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 hover:bg-white/10 transition"><i data-lucide="zoom-out" class="h-4 w-4"></i></button>
@@ -150,15 +155,15 @@
             <button id="zin" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 hover:bg-white/10 transition"><i data-lucide="zoom-in" class="h-4 w-4"></i></button>
           </div>
         </div>
-        <div id="arch-container" class="relative w-full" style="height: 620px;">
+        <div id="arch-container" class="relative w-full" style="height: 640px;">
           <svg id="arch-svg"></svg>
           <div id="arch-tooltip" class="glass rounded-xl px-3.5 py-2.5 text-xs shadow-2xl"></div>
         </div>
       </div>
       <!-- 图例 -->
-      <div class="mt-4 flex flex-wrap items-center gap-3 fade-up">
-        <span class="text-xs text-slate-400">类型：</span>
-        <div id="legend" class="flex flex-wrap gap-3"></div>
+      <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 fade-up">
+        <span class="text-xs text-slate-400 font-medium">区域：</span>
+        <div id="legend" class="flex flex-wrap gap-x-4 gap-y-2"></div>
       </div>
     </section>
 
@@ -243,7 +248,7 @@
     const ARTIFACT_META = {
       title: "架构演进：从 Framework 到 Harness",
       emoji: "🧭",
-      version: 2,
+      version: 3,
       createdAt: "2026-07-23T00:00:00",
       updatedAt: "2026-07-23T00:00:00"
     };
@@ -254,51 +259,50 @@
     const ARTIFACT_DATA = {
       generatedAt: "2026-07-23",
 
-      // D3 架构图：节点 + 连线 + 分层定义
-      // layer: 0=入口 1=核心 2=上下文 3=工具 ; 特殊层: -1=大模型 -2=物理世界
-      archLayers: [
-        { id: "entry",   name: "入口交互层",     subtitle: "引擎触角",       y: 0,   color: "#6366f1" },
-        { id: "core",    name: "核心引擎层",     subtitle: "心脏",           y: 1,   color: "#f43f5e" },
-        { id: "context", name: "上下文工程层",   subtitle: "内存管理器",     y: 2,   color: "#f59e0b" },
-        { id: "tools",   name: "工具与执行层",   subtitle: "四肢",           y: 3,   color: "#10b981" }
+      // 中心辐射式架构：4 个功能区 + 中心节点 + 2 个边界实体
+      // zone 决定节点在图中的方位：top(LLM) / left(入口) / right(工具) / bottom(上下文)
+      // 主干数据流步骤序号 step（1-6），无 step 的为支撑性连线
+      archZones: [
+        { id: "llm",     label: "大模型 = CPU",  color: "#8b5cf6", side: "top" },
+        { id: "entry",   label: "入口交互层",    color: "#6366f1", side: "left" },
+        { id: "tools",   label: "工具与执行层",  color: "#10b981", side: "right" },
+        { id: "context", label: "上下文工程层",  color: "#f59e0b", side: "bottom" }
       ],
       archNodes: [
-        // 入口层
-        { id: "CLI",     label: "终端 CLI",          detail: "终端命令行输入，引擎对外的触角之一。",            layer: "entry",   icon: "💻", type: "entry" },
-        { id: "FEISHU",  label: "飞书机器人",         detail: "接入飞书机器人的事件流，打通真实世界。",          layer: "entry",   icon: "💬", type: "entry" },
-        { id: "HITL",    label: "人工审批回调",       detail: "Human-in-the-loop 异步回调机制。",               layer: "entry",   icon: "✋", type: "entry" },
-        // 核心层
-        { id: "LOOP",    label: "Main Loop",         detail: "系统心脏。维持 ReAct 循环（思考→行动→观察），是 Agent 的心跳。", layer: "core", icon: "🔄", type: "core" },
-        { id: "THINK",   label: "Thinking 模块",     detail: "在行动前强制模型进行慢思考，剥离独立的 Thinking 阶段。", layer: "core", icon: "🧩", type: "core" },
-        { id: "ADAPTER", label: "大模型适配器",       detail: "抹平 Claude、OpenAI 兼容等厂商 API 差异的「大脑接口」。",     layer: "core", icon: "🔌", type: "adapter" },
-        // 上下文层
-        { id: "PROMPT",  label: "Prompt 组装器",     detail: "动态拼装模块化的系统规则（如读取 AGENTS.md），告别面条代码。", layer: "context", icon: "📝", type: "context" },
-        { id: "COMPACT", label: "Token 压缩器",      detail: "像 OS 内存回收器，盯 Token 水位线触发阶梯压缩（ContextCompaction）。", layer: "context", icon: "🗜️", type: "context" },
-        { id: "REMIND",  label: "事件提醒注入",       detail: "防走神利器，在模型决策前一刻注入干预指令（SystemReminders）。",   layer: "context", icon: "🔔", type: "context" },
-        { id: "MEM",     label: "文件系统记忆",       detail: "极简哲学核心：抛弃内部变量，直接把进度写在本地 TODO.md。",         layer: "context", icon: "💾", type: "context" },
-        // 工具层
-        { id: "REG",     label: "ToolRegistry",      detail: "动态工具注册表，配合极简工具集组合出无限可能。",     layer: "tools",   icon: "🧰", type: "tools" },
-        { id: "TOOL",    label: "极简工具集",         detail: "read/write/edit/bash 四件套，大道至简的 YOLO 执行哲学。", layer: "tools", icon: "🔧", type: "tools" },
-        { id: "MW",      label: "Middleware",        detail: "死守大门：拦截高危命令、对接飞书人工审批，防线前移。",     layer: "tools",   icon: "🛡️", type: "tools" },
-        // 外部实体
-        { id: "LLM",     label: "大模型 = CPU",      detail: "拥有极强自主规划能力的 CPU。不需要代码规定流程，靠实时推理决定走向。", layer: "core",   icon: "🧠", type: "external", special: "llm" },
-        { id: "PHYSICAL",label: "物理世界",          detail: "Agent 通过工具最终改变的物理世界（文件系统、终端、飞书消息等）。",     layer: "tools",   icon: "🌍", type: "external", special: "physical" }
+        // 中心心脏
+        { id: "LOOP",    label: "Main Loop",     detail: "系统心脏。维持 ReAct 循环（Reason→Act→Observe），是整个 Agent 的心跳。所有输入汇聚于此，所有调度源于此。", zone: "center", icon: "🔄", isHeart: true },
+        // 大模型（顶部）
+        { id: "LLM",     label: "大模型",        detail: "拥有极强自主规划能力的 CPU。不需要代码规定流程，靠实时推理决定下一步走向。这是 Harness 与 Framework 的根本分野。", zone: "llm", icon: "🧠" },
+        // 入口（左侧，3 个扇形分布）
+        { id: "CLI",     label: "终端 CLI",      detail: "终端命令行输入，引擎对外的触角之一。",            zone: "entry", icon: "💻" },
+        { id: "FEISHU",  label: "飞书机器人",     detail: "接入飞书机器人的事件流，打通真实世界的 IM 通道。",  zone: "entry", icon: "💬" },
+        { id: "HITL",    label: "人工审批",       detail: "Human-in-the-loop 异步回调机制，高危操作的审批入口。", zone: "entry", icon: "✋" },
+        // 工具（右侧，3 个扇形分布，有执行链顺序）
+        { id: "REG",     label: "ToolRegistry",  detail: "动态工具注册表，配合极简工具集组合出无限可能。",     zone: "tools", icon: "🧰" },
+        { id: "TOOL",    label: "极简工具集",     detail: "read/write/edit/bash 四件套，大道至简的 YOLO 执行哲学。", zone: "tools", icon: "🔧" },
+        { id: "MW",      label: "Middleware",    detail: "死守大门：拦截高危命令、对接飞书人工审批，防线前移。", zone: "tools", icon: "🛡️" },
+        { id: "PHYSICAL",label: "物理世界",       detail: "Agent 通过工具最终改变的物理世界（文件系统、终端、飞书消息等）。", zone: "tools", icon: "🌍", isBoundary: true },
+        // 上下文（底部，4 个扇形分布）
+        { id: "PROMPT",  label: "Prompt 组装器", detail: "动态拼装模块化的系统规则（如读取 AGENTS.md），告别面条代码。", zone: "context", icon: "📝" },
+        { id: "COMPACT", label: "Token 压缩器",  detail: "像 OS 内存回收器，盯 Token 水位线触发阶梯压缩（ContextCompaction）。", zone: "context", icon: "🗜️" },
+        { id: "REMIND",  label: "事件提醒",       detail: "防走神利器，在模型决策前一刻注入干预指令（SystemReminders）。",   zone: "context", icon: "🔔" },
+        { id: "MEM",     label: "文件记忆",       detail: "极简哲学核心：抛弃内部变量，直接把进度写在本地 TODO.md。",         zone: "context", icon: "💾" }
       ],
+      // 连线：step 标记主干数据流序号（1→2→3→4→5→6 形成完整回路）
       archLinks: [
-        { source: "CLI",     target: "LOOP",    label: "输入" },
-        { source: "FEISHU",  target: "LOOP",    label: "事件" },
-        { source: "HITL",    target: "MW",      label: "审批", dashed: true },
-        { source: "LOOP",    target: "LLM",     label: "推理/响应", bidirectional: true, highlighted: true },
-        { source: "LOOP",    target: "THINK",   label: "" },
-        { source: "LOOP",    target: "ADAPTER", label: "" },
-        { source: "LOOP",    target: "PROMPT",  label: "" },
-        { source: "LOOP",    target: "COMPACT", label: "" },
-        { source: "LOOP",    target: "REMIND",  label: "" },
-        { source: "LOOP",    target: "MEM",     label: "" },
-        { source: "LOOP",    target: "REG",     label: "" },
-        { source: "REG",     target: "TOOL",    label: "" },
-        { source: "TOOL",    target: "MW",      label: "" },
-        { source: "MW",      target: "PHYSICAL",label: "执行" }
+        { source: "CLI",     target: "LOOP",    step: 1, label: "① 输入",   kind: "flow" },
+        { source: "FEISHU",  target: "LOOP",    step: 1, label: "① 输入",   kind: "flow" },
+        { source: "HITL",    target: "MW",                   label: "审批回调", kind: "support", dashed: true },
+        { source: "LOOP",    target: "LLM",     step: 2, label: "② 推理/响应", kind: "core", bidirectional: true },
+        { source: "LOOP",    target: "PROMPT",  step: 3, label: "③ 调用",   kind: "flow" },
+        { source: "LOOP",    target: "COMPACT",              kind: "support" },
+        { source: "LOOP",    target: "REMIND",               kind: "support" },
+        { source: "LOOP",    target: "MEM",                  kind: "support" },
+        { source: "LOOP",    target: "REG",     step: 4, label: "④ 分发",   kind: "flow" },
+        { source: "REG",     target: "TOOL",    step: 4, label: "",         kind: "chain" },
+        { source: "TOOL",    target: "MW",      step: 5, label: "",         kind: "chain" },
+        { source: "MW",      target: "PHYSICAL",step: 5, label: "⑤ 执行",   kind: "flow" },
+        { source: "PHYSICAL",target: "LOOP",    step: 6, label: "⑥ 观察回写", kind: "feedback", curved: "loop" }
       ],
 
       compareRows: [
@@ -374,15 +378,13 @@ func main() {
     };
 
     // ============================================================
-    // 类型配色（与分层详解一致）
+    // 配色
     // ============================================================
-    const TYPE_COLOR = {
-      entry: "#6366f1", core: "#f43f5e", adapter: "#0ea5e9",
-      context: "#f59e0b", tools: "#10b981", external: "#8b5cf6"
-    };
-    const TYPE_LABEL = {
-      entry: "入口", core: "核心", adapter: "适配器",
-      context: "上下文", tools: "工具", external: "外部"
+    const ZONE_COLOR = { llm: "#8b5cf6", entry: "#6366f1", tools: "#10b981", context: "#f59e0b", center: "#f43f5e" };
+    const ZONE_LABEL = { llm: "大模型", entry: "入口", tools: "工具", context: "上下文", center: "心脏" };
+    const LINK_COLOR = {
+      core: "#a78bfa", flow: "#818cf8", chain: "#34d399",
+      support: "#64748b", feedback: "#fbbf24"
     };
 
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
@@ -395,337 +397,363 @@ func main() {
     document.getElementById("themeToggle").addEventListener("click", () => {
       const isDark = document.documentElement.classList.toggle("dark");
       safeStore("artifact-theme", isDark ? "dark" : "light");
-      if (window.__renderArch) window.__renderArch();
+      if (window.__renderArch) try { window.__renderArch(); } catch(e) { console.warn("renderArch:", e); }
     });
 
-    // ============================================================
-    // Header / footer
-    // ============================================================
     document.getElementById("version").textContent = "v" + ARTIFACT_META.version;
     document.getElementById("footer-meta").textContent = "v" + ARTIFACT_META.version + " · " + ARTIFACT_META.createdAt.slice(0,10);
 
     // ============================================================
-    // D3 架构图渲染
+    // D3 架构图：中心辐射式布局
+    // 设计逻辑：LOOP 居中放大；LLM 在正上方（推理主干）；入口扇形在左；
+    //          工具链在右（有顺序）；上下文在下方支撑。连线带序号讲数据流。
     // ============================================================
     window.__renderArch = function () {
-      const container = document.getElementById("arch-container");
-      const svg = d3.select("#arch-svg");
+      var container = document.getElementById("arch-container");
+      var svg = d3.select("#arch-svg");
       svg.selectAll("*").remove();
+      svg.on(".zoom", null);
 
-      const isDark = document.documentElement.classList.contains("dark");
-      const W = container.clientWidth;
-      const H = container.clientHeight;
+      var isDark = document.documentElement.classList.contains("dark");
+      var textMain = isDark ? "#e2e8f0" : "#334155";
+      var textSub = isDark ? "#94a3b8" : "#64748b";
 
-      // 分层 Y 坐标（特殊节点单独定位）
-      const layerCount = ARTIFACT_DATA.archLayers.length;
-      const layerH = (H - 60) / layerCount;
-      const layerY = {};
-      ARTIFACT_DATA.archLayers.forEach((l, i) => { layerY[l.id] = 50 + i * layerH + layerH / 2; });
+      var W = Math.max(container.clientWidth, 600);
+      var H = Math.max(container.clientHeight, 500);
+      var cx = W / 2, cy = H / 2;
 
-      // 构建节点副本，赋予坐标（special 节点不参与层内等分）
-      const layerGroups = {};
-      ARTIFACT_DATA.archNodes.forEach(n => {
-        if (n.special) return; // LLM/PHYSICAL 单独定位
-        (layerGroups[n.layer] = layerGroups[n.layer] || []).push(n);
+      // 定义中心 + 各区域锚点
+      var zones = {
+        center: { x: cx, y: cy },
+        llm:    { x: cx, y: cy - 200 },
+        entry:  { x: cx - 320, y: cy - 30 },
+        tools:  { x: cx + 320, y: cy - 30 },
+        context:{ x: cx, y: cy + 210 }
+      };
+
+      // 给每个非中心节点分配坐标（在其 zone 锚点周围扇形分布）
+      var zoneNodes = {};
+      ARTIFACT_DATA.archNodes.forEach(function(n) {
+        if (n.zone === "center") return;
+        (zoneNodes[n.zone] = zoneNodes[n.zone] || []).push(n);
       });
-      const nodes = ARTIFACT_DATA.archNodes.map(n => {
-        if (n.special) return Object.assign({}, n, { x: 0, y: 0 });
-        const sibs = layerGroups[n.layer] || [n];
-        const idx = sibs.indexOf(n);
-        const span = W * 0.86;
-        const startX = W * 0.07;
-        const step = sibs.length > 1 ? span / (sibs.length - 1) : 0;
-        return Object.assign({}, n, {
-          x: sibs.length === 1 ? W / 2 : startX + idx * step,
-          y: layerY[n.layer]
+
+      var nodeCoord = {};
+      // 中心
+      ARTIFACT_DATA.archNodes.filter(function(n){return n.zone==="center";}).forEach(function(n){
+        nodeCoord[n.id] = { x: zones.center.x, y: zones.center.y };
+      });
+      // 各区域扇形分布
+      Object.keys(zoneNodes).forEach(function(zid) {
+        var arr = zoneNodes[zid];
+        var anchor = zones[zid];
+        var n = arr.length;
+        // 不同区域用不同的扇形展开方向
+        var spread = 150, arc = 110;
+        arr.forEach(function(node, i) {
+          var t = n === 1 ? 0.5 : i / (n - 1);
+          var offset = (t - 0.5) * spread * 2.2;
+          if (zid === "llm")      nodeCoord[node.id] = { x: anchor.x + offset, y: anchor.y - Math.abs(t-0.5)*40 };
+          else if (zid === "entry") nodeCoord[node.id] = { x: anchor.x - Math.abs(t-0.5)*60, y: anchor.y + offset };
+          else if (zid === "tools") nodeCoord[node.id] = { x: anchor.x + Math.abs(t-0.5)*40, y: anchor.y + offset };
+          else if (zid === "context") nodeCoord[node.id] = { x: anchor.x + offset, y: anchor.y + Math.abs(t-0.5)*30 };
         });
       });
-      const nodeMap = {}; nodes.forEach(n => nodeMap[n.id] = n);
+      // 边界节点 PHYSICAL 单独放在工具区更右
+      if (nodeCoord.PHYSICAL) { nodeCoord.PHYSICAL.x = zones.tools.x + 140; nodeCoord.PHYSICAL.y = zones.tools.y + 150; }
 
-      // 特殊节点：LLM 放在核心层上方偏右，PHYSICAL 放在最底
-      if (nodeMap.LLM)      { nodeMap.LLM.y = layerY["core"] - 95; nodeMap.LLM.x = W * 0.82; }
-      if (nodeMap.PHYSICAL) { nodeMap.PHYSICAL.y = H - 35; nodeMap.PHYSICAL.x = W * 0.82; }
-
-      const links = ARTIFACT_DATA.archLinks.map(l => ({
-        source: nodeMap[l.source],
-        target: nodeMap[l.target],
-        label: l.label, dashed: l.dashed, bidirectional: l.bidirectional, highlighted: l.highlighted
-      })).filter(l => l.source && l.target);
-
-      // defs：箭头 marker
-      const defs = svg.append("defs");
-      Object.keys(TYPE_COLOR).forEach(t => {
-        defs.append("marker").attr("id", "arrow-" + t)
-          .attr("viewBox", "0 -5 10 10").attr("refX", 8).attr("refY", 0)
-          .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
-          .append("path").attr("d", "M0,-5L10,0L0,5")
-          .attr("fill", isDark ? "rgba(203,213,225,0.6)" : "rgba(71,85,105,0.6)");
+      // 合并坐标到节点对象
+      var nodes = ARTIFACT_DATA.archNodes.map(function(n) {
+        return Object.assign({}, n, nodeCoord[n.id] || { x: cx, y: cy });
       });
-      const glow = defs.append("filter").attr("id", "node-glow").attr("x", "-50%").attr("y", "-50%").attr("width", "200%").attr("height", "200%");
-      glow.append("feGaussianBlur").attr("stdDeviation", 4).attr("result", "blur");
-      const fm = glow.append("feMerge"); fm.append("feMergeNode").attr("in", "blur"); fm.append("feMergeNode").attr("in", "SourceGraphic");
+      var nodeMap = {}; nodes.forEach(function(n){ nodeMap[n.id] = n; });
 
-      // 分层背景带
-      const layerBg = svg.append("g").attr("class", "layers");
-      ARTIFACT_DATA.archLayers.forEach(l => {
-        const y0 = 50 + l.y * layerH / 1 + (ARTIFACT_DATA.archLayers.indexOf(l)) * layerH;
-        const yPos = 50 + ARTIFACT_DATA.archLayers.indexOf(l) * layerH + 8;
-        const g = layerBg.append("g");
+      var links = ARTIFACT_DATA.archLinks.map(function(l) {
+        return { source: nodeMap[l.source], target: nodeMap[l.target], step: l.step, label: l.label, kind: l.kind, dashed: l.dashed, bidirectional: l.bidirectional, curved: l.curved };
+      }).filter(function(l){ return l.source && l.target; });
+
+      // defs：箭头
+      var defs = svg.append("defs");
+      Object.keys(LINK_COLOR).forEach(function(k) {
+        var m = defs.append("marker").attr("id", "arr-" + k)
+          .attr("viewBox", "0 -5 10 10").attr("refX", 9).attr("refY", 0)
+          .attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto");
+        m.append("path").attr("d", "M0,-5L10,0L0,5").attr("fill", LINK_COLOR[k]);
+      });
+      Object.keys(LINK_COLOR).forEach(function(k) {
+        var m = defs.append("marker").attr("id", "arrs-" + k)
+          .attr("viewBox", "0 -5 10 10").attr("refX", 1).attr("refY", 0)
+          .attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto");
+        m.append("path").attr("d", "M10,-5L0,0L10,5").attr("fill", LINK_COLOR[k]);
+      });
+
+      // 分区背景（半透明圆角矩形 + 标签）
+      var zoneBg = svg.append("g").attr("class", "zones");
+      function zoneBox(zid, x, y, w, h, color) {
+        var g = zoneBg.append("g");
+        g.append("rect").attr("x", x).attr("y", y).attr("width", w).attr("height", h)
+          .attr("rx", 16).attr("fill", color).attr("fill-opacity", isDark ? 0.05 : 0.06)
+          .attr("stroke", color).attr("stroke-opacity", 0.2).attr("stroke-width", 1).attr("stroke-dasharray", "6,5");
+        var lbl = ARTIFACT_DATA.archZones.filter(function(z){return z.id===zid;})[0];
+        if (lbl) {
+          g.append("text").attr("class", "arch-zone-label").attr("text-anchor", "middle")
+            .attr("x", x + w/2).attr("y", y + 18).attr("fill", color).text(lbl.label);
+        }
+      }
+      zoneBox("entry",   zones.entry.x - 75,  zones.entry.y - 165, 150, 330, ZONE_COLOR.entry);
+      zoneBox("tools",   zones.tools.x - 75,  zones.tools.y - 165, 190, 360, ZONE_COLOR.tools);
+      zoneBox("context", zones.context.x - 235, zones.context.y - 40, 470, 110, ZONE_COLOR.context);
+      // LLM 不画框（它是单独的中心对称实体）
+
+      // 连线
+      var linkG = svg.append("g").attr("class", "links");
+      function linkPath(l) {
+        var s = l.source, t = l.target;
+        var dx = t.x - s.x, dy = t.y - s.y;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        // 边缘留白，避免箭头插进节点圆内
+        var r1 = (nodeMap[s.id].isHeart ? 52 : (nodeMap[s.id].isBoundary ? 36 : 30));
+        var r2 = (nodeMap[t.id].isHeart ? 52 : (nodeMap[t.id].isBoundary ? 36 : 30));
+        var sx = s.x + dx/dist * r1, sy = s.y + dy/dist * r1;
+        var tx = t.x - dx/dist * r2, ty = t.y - dy/dist * r2;
+        if (l.curved === "loop") {
+          // 反馈线走大弧线绕外侧
+          var mx = (sx + tx) / 2 + 120, my = (sy + ty) / 2 + 80;
+          return "M" + sx + "," + sy + " Q " + mx + "," + my + " " + tx + "," + ty;
+        }
+        // 普通连线：微曲线
+        var dr = dist * 1.5;
+        return "M" + sx + "," + sy + "A" + dr + "," + dr + " 0 0,1 " + tx + "," + ty;
+      }
+      var linkEls = linkG.selectAll("path").data(links).enter().append("path")
+        .attr("class", "arch-link")
+        .attr("stroke", function(d) { return LINK_COLOR[d.kind] || LINK_COLOR.support; })
+        .attr("stroke-opacity", function(d) { return d.kind === "core" ? 0.9 : (d.kind === "flow" ? 0.7 : (d.kind === "support" ? 0.35 : 0.6)); })
+        .attr("stroke-width", function(d) { return d.kind === "core" ? 3 : (d.step ? 2 : 1.3); })
+        .attr("stroke-dasharray", function(d) { return d.dashed ? "5,4" : null; })
+        .attr("marker-end", function(d) { return "url(#arr-" + d.kind + ")"; })
+        .attr("marker-start", function(d) { return d.bidirectional ? "url(#arrs-" + d.kind + ")" : null; })
+        .attr("d", linkPath);
+
+      // 连线 label（带序号）
+      var labelG = svg.append("g").attr("class", "link-labels");
+      links.filter(function(l){ return l.label; }).forEach(function(l) {
+        var s = l.source, t = l.target;
+        var mx = (s.x + t.x)/2, my = (s.y + t.y)/2;
+        if (l.curved === "loop") { mx += 120; my += 80; }
+        var g = labelG.append("g").attr("transform", "translate(" + mx + "," + my + ")");
+        var isStep = !!l.step;
         g.append("rect")
-          .attr("x", 12).attr("y", yPos).attr("width", W - 24).attr("height", layerH - 16)
-          .attr("rx", 14)
-          .attr("fill", l.color)
-          .attr("fill-opacity", isDark ? 0.04 : 0.05)
-          .attr("stroke", l.color).attr("stroke-opacity", 0.15).attr("stroke-width", 1);
-        g.append("circle").attr("cx", 28).attr("cy", yPos + 18).attr("r", 4).attr("fill", l.color);
-        g.append("text").attr("x", 40).attr("y", yPos + 22)
-          .attr("fill", isDark ? "#cbd5e1" : "#475569")
-          .attr("class", "arch-layer-label")
-          .text(l.name + " · " + l.subtitle);
+          .attr("x", -28).attr("y", -9).attr("width", 56).attr("height", 18).attr("rx", 9)
+          .attr("fill", isDark ? "#1e1b4b" : "#fff")
+          .attr("stroke", LINK_COLOR[l.kind] || LINK_COLOR.support).attr("stroke-width", 1);
+        g.append("text").attr("class", "arch-step").attr("text-anchor", "middle").attr("dy", "0.35em")
+          .attr("fill", LINK_COLOR[l.kind] || LINK_COLOR.support).text(l.label);
       });
-
-      // 连线（曲线）
-      const linkG = svg.append("g").attr("class", "links");
-      const linkEls = linkG.selectAll("path").data(links).enter().append("path")
-        .attr("class", d => "arch-link" + (d.highlighted ? " highlighted" : ""))
-        .attr("stroke", d => {
-          if (d.highlighted) return "#8b5cf6";
-          return isDark ? "rgba(148,163,184,0.4)" : "rgba(100,116,139,0.4)";
-        })
-        .attr("stroke-width", d => d.highlighted ? 2.5 : 1.2)
-        .attr("stroke-dasharray", d => d.dashed ? "5,4" : null)
-        .attr("marker-end", d => "url(#arrow-" + (d.target.type || "core") + ")")
-        .attr("marker-start", d => d.bidirectional ? "url(#arrow-" + (d.source.type || "core") + ")" : null)
-        .attr("d", d => {
-          const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
-          const dr = Math.sqrt(dx * dx + dy * dy) * 1.8;
-          return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
-        });
-
-      // 连线 label
-      linkG.selectAll("text").data(links.filter(l => l.label)).enter().append("text")
-        .attr("class", "arch-node-label")
-        .attr("x", d => (d.source.x + d.target.x) / 2)
-        .attr("y", d => (d.source.y + d.target.y) / 2 - 6)
-        .attr("fill", d => d.highlighted ? "#a78bfa" : (isDark ? "#64748b" : "#94a3b8"))
-        .attr("font-size", "9px")
-        .text(d => d.label);
 
       // 节点
-      const nodeG = svg.append("g").attr("class", "nodes");
-      const nodeEls = nodeG.selectAll("g").data(nodes).enter().append("g")
+      var nodeG = svg.append("g").attr("class", "nodes");
+      var nodeEls = nodeG.selectAll("g").data(nodes).enter().append("g")
         .attr("class", "arch-node-group")
-        .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+        .attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 
-      const R = 26;
-      nodeEls.append("circle")
-        .attr("class", "arch-node-circle")
-        .attr("r", d => d.special ? 32 : R)
-        .attr("fill", d => d.color || TYPE_COLOR[d.type])
-        .attr("fill", d => {
-          const c = TYPE_COLOR[d.type];
-          return c;
-        })
-        .attr("fill-opacity", isDark ? 0.18 : 0.14)
-        .attr("stroke", d => TYPE_COLOR[d.type])
-        .attr("stroke-width", d => d.id === "LOOP" ? 2.5 : 1.5)
-        .style("color", d => TYPE_COLOR[d.type]);
+      nodeEls.each(function(d) {
+        var g = d3.select(this);
+        var color = ZONE_COLOR[d.zone] || "#64748b";
+        var R = d.isHeart ? 48 : (d.isBoundary ? 34 : 28);
+        var Ri = d.isHeart ? 38 : (d.isBoundary ? 26 : 21);
 
-      // 内部小图标圆
-      nodeEls.append("circle")
-        .attr("r", d => d.special ? 22 : 18)
-        .attr("fill", d => TYPE_COLOR[d.type])
-        .attr("fill-opacity", isDark ? 0.95 : 0.9);
-
-      nodeEls.append("text").attr("class", "arch-node-icon")
-        .attr("dy", "0.35em").attr("fill", "#fff").text(d => d.icon);
-
-      nodeEls.append("text").attr("class", "arch-node-label")
-        .attr("y", d => (d.special ? 46 : 40)).attr("dy", "0.35em")
-        .attr("fill", isDark ? "#e2e8f0" : "#334155")
-        .text(d => d.label);
+        // 外圈光晕
+        g.append("circle").attr("class", "arch-node-outer")
+          .attr("r", R + 6).attr("fill", color).attr("fill-opacity", 0.08)
+          .attr("stroke", color).attr("stroke-opacity", d.isHeart ? 0.6 : 0.3).attr("stroke-width", d.isHeart ? 2 : 1);
+        // 主圆
+        g.append("circle").attr("r", R).attr("fill", color).attr("fill-opacity", isDark ? 0.16 : 0.12)
+          .attr("stroke", color).attr("stroke-width", d.isHeart ? 2.5 : 1.5);
+        // 内圆
+        g.append("circle").attr("r", Ri).attr("fill", color).attr("fill-opacity", isDark ? 0.95 : 0.88);
+        // 图标
+        g.append("text").attr("class", "arch-node-icon").attr("dy", "0.05em")
+          .attr("font-size", d.isHeart ? 26 : 18).attr("fill", "#fff").text(d.icon);
+        // 标签
+        g.append("text").attr("class", "arch-node-label")
+          .attr("y", R + 16).attr("dy", "0.35em").attr("fill", textMain).text(d.label);
+        // 心脏特殊标记
+        if (d.isHeart) {
+          g.append("text").attr("class", "arch-node-sub")
+            .attr("y", R + 30).attr("dy", "0.35em").attr("fill", color).text("ReAct 心脏");
+        }
+      });
 
       // 拖拽
-      const drag = d3.drag()
-        .on("start", (event, d) => { d.fx = d.x; d.fy = d.y; })
-        .on("drag", (event, d) => {
-          d.fx = event.x; d.fy = event.y; d.x = event.x; d.y = event.y;
-          d3.select(event.sourceEvent.target.closest("g")).attr("transform", "translate(" + d.x + "," + d.y + ")");
-          // 更新关联连线
-          linkEls.attr("d", l => {
-            const sx = l.source.x, sy = l.source.y, tx = l.target.x, ty = l.target.y;
-            const dx = tx - sx, dy = ty - sy, dr = Math.sqrt(dx * dx + dy * dy) * 1.8;
-            return "M" + sx + "," + sy + "A" + dr + "," + dr + " 0 0,1 " + tx + "," + ty;
+      var drag = d3.drag()
+        .on("start", function(event, d) { d.fx = d.x; d.fy = d.y; })
+        .on("drag", function(event, d) {
+          d.x = event.x; d.y = event.y; d.fx = event.x; d.fy = event.y;
+          d3.select(this).attr("transform", "translate(" + d.x + "," + d.y + ")");
+          linkEls.attr("d", linkPath);
+          labelG.selectAll("g").remove();
+          links.filter(function(l){ return l.label; }).forEach(function(l) {
+            var s = l.source, t = l.target;
+            var mx = (s.x + t.x)/2, my = (s.y + t.y)/2;
+            if (l.curved === "loop") { mx += 120; my += 80; }
+            var gg = labelG.append("g").attr("transform", "translate(" + mx + "," + my + ")");
+            var isStep = !!l.step;
+            gg.append("rect").attr("x", -28).attr("y", -9).attr("width", 56).attr("height", 18).attr("rx", 9)
+              .attr("fill", isDark ? "#1e1b4b" : "#fff")
+              .attr("stroke", LINK_COLOR[l.kind] || LINK_COLOR.support).attr("stroke-width", 1);
+            gg.append("text").attr("class", "arch-step").attr("text-anchor", "middle").attr("dy", "0.35em")
+              .attr("fill", LINK_COLOR[l.kind] || LINK_COLOR.support).text(l.label);
           });
         })
-        .on("end", (event, d) => { d.fx = null; d.fy = null; });
+        .on("end", function(event, d) { d.fx = null; d.fy = null; });
       nodeEls.call(drag);
 
       // 交互：hover 高亮
-      const tooltip = d3.select("#arch-tooltip");
-      let lockedNode = null;
-      nodeEls.on("mouseenter", function (event, d) {
+      var tooltip = d3.select("#arch-tooltip");
+      var lockedNode = null;
+      nodeEls.on("mouseenter", function(event, d) {
         if (lockedNode) return;
-        highlightNode(d);
-        showTooltip(event, d);
-      }).on("mousemove", function (event, d) {
-        if (lockedNode) return;
-        positionTooltip(event);
-      }).on("mouseleave", function () {
-        if (lockedNode) return;
-        clearHighlight();
-        tooltip.style("opacity", 0);
-      }).on("click", function (event, d) {
+        highlightNode(d); showTooltip(event, d);
+      }).on("mousemove", function(event) {
+        if (lockedNode) return; positionTooltip(event);
+      }).on("mouseleave", function() {
+        if (lockedNode) return; clearHighlight(); tooltip.style("opacity", 0);
+      }).on("click", function(event, d) {
         event.stopPropagation();
         lockedNode = (lockedNode && lockedNode.id === d.id) ? null : d;
         if (lockedNode) { highlightNode(d); showTooltip(event, d); }
         else { clearHighlight(); tooltip.style("opacity", 0); }
       });
-
-      svg.on("click", function () {
-        lockedNode = null; clearHighlight(); tooltip.style("opacity", 0);
-      });
+      svg.on("click", function() { lockedNode = null; clearHighlight(); tooltip.style("opacity", 0); });
 
       function highlightNode(d) {
-        const connected = new Set([d.id]);
-        links.forEach(l => {
+        var connected = new Set([d.id]);
+        links.forEach(function(l) {
           if (l.source.id === d.id) connected.add(l.target.id);
           if (l.target.id === d.id) connected.add(l.source.id);
         });
-        nodeEls.classed("dimmed", n => !connected.has(n.id));
-        linkEls.classed("highlighted", l => l.source.id === d.id || l.target.id === d.id)
-               .classed("dimmed", l => !(l.source.id === d.id || l.target.id === d.id));
+        nodeEls.classed("dimmed", function(n) { return !connected.has(n.id); });
+        linkEls.classed("dimmed", function(l) { return !(l.source.id === d.id || l.target.id === d.id); });
       }
       function clearHighlight() {
         nodeEls.classed("dimmed", false);
-        linkEls.classed("dimmed", false).classed("highlighted", l => !!l.highlighted);
+        linkEls.classed("dimmed", false);
       }
       function showTooltip(event, d) {
+        var zoneName = ZONE_LABEL[d.zone] || "";
+        var badge = d.isHeart ? "心脏" : (d.isBoundary ? "边界" : zoneName);
+        var badgeColor = ZONE_COLOR[d.zone] || "#64748b";
         tooltip.html(
           '<div class="font-medium mb-1 flex items-center gap-1.5">' +
-          '<span>' + d.icon + '</span><span>' + escapeHtml(d.label) + '</span>' +
-          '<span class="text-[9px] px-1.5 py-0.5 rounded-full" style="background:' + TYPE_COLOR[d.type] + '33;color:' + TYPE_COLOR[d.type] + '">' + TYPE_LABEL[d.type] + '</span></div>' +
+          '<span style="font-size:15px">' + d.icon + '</span><span>' + escapeHtml(d.label) + '</span>' +
+          '<span class="text-[9px] px-1.5 py-0.5 rounded-full" style="background:' + badgeColor + '33;color:' + badgeColor + '">' + badge + '</span></div>' +
           '<div class="text-slate-400 leading-relaxed">' + escapeHtml(d.detail) + '</div>'
         ).style("opacity", 1);
         positionTooltip(event);
       }
       function positionTooltip(event) {
-        const rect = container.getBoundingClientRect();
-        let x = event.clientX - rect.left + 14;
-        let y = event.clientY - rect.top + 14;
-        if (x + 260 > rect.width) x = event.clientX - rect.left - 274;
-        if (y + 80 > rect.height) y = event.clientY - rect.top - 90;
+        var rect = container.getBoundingClientRect();
+        var x = event.clientX - rect.left + 14;
+        var y = event.clientY - rect.top + 14;
+        if (x + 280 > rect.width) x = event.clientX - rect.left - 294;
+        if (y + 90 > rect.height) y = event.clientY - rect.top - 100;
         tooltip.style("left", x + "px").style("top", y + "px");
       }
 
-      // 缩放
-      let zoomState = 1;
-      const gAll = svg.selectAll("g");
-      // 用全局 transform 缩放（包裹所有 g）
-      const wrapper = svg.insert("g", ":first-child");
-      // 实际我们直接对 svg viewBox 操作更稳妥
-      applyZoom();
+      // 缩放（viewBox 方式，稳坝不裁切）
+      var zoomState = 1;
       function applyZoom() {
-        const nw = W / zoomState, nh = H / zoomState;
-        const nx = (W - nw) / 2, ny = (H - nh) / 2;
+        var nw = W / zoomState, nh = H / zoomState;
+        var nx = (W - nw) / 2, ny = (H - nh) / 2;
         svg.attr("viewBox", nx + " " + ny + " " + nw + " " + nh);
       }
-      window.__archZoom = function (delta) {
-        zoomState = Math.max(0.5, Math.min(2.5, zoomState + delta));
-        applyZoom();
-      };
-      window.__archZoomReset = function () { zoomState = 1; applyZoom(); };
+      applyZoom();
+      window.__archZoom = function(delta) { zoomState = Math.max(0.5, Math.min(2.5, zoomState + delta)); applyZoom(); };
+      window.__archZoomReset = function() { zoomState = 1; applyZoom(); };
     };
 
-    document.getElementById("zin").addEventListener("click", () => window.__archZoom && window.__archZoom(0.15));
-    document.getElementById("zout").addEventListener("click", () => window.__archZoom && window.__archZoom(-0.15));
-    document.getElementById("zreset").addEventListener("click", () => window.__archZoomReset && window.__archZoomReset());
-    document.getElementById("arch-container").addEventListener("wheel", e => {
-      if (e.ctrlKey) { e.preventDefault(); window.__archZoom && window.__archZoom(e.deltaY < 0 ? 0.1 : -0.1); }
+    document.getElementById("zin").addEventListener("click", function() { if (window.__archZoom) window.__archZoom(0.15); });
+    document.getElementById("zout").addEventListener("click", function() { if (window.__archZoom) window.__archZoom(-0.15); });
+    document.getElementById("zreset").addEventListener("click", function() { if (window.__archZoomReset) window.__archZoomReset(); });
+    document.getElementById("arch-container").addEventListener("wheel", function(e) {
+      if (e.ctrlKey) { e.preventDefault(); if (window.__archZoom) window.__archZoom(e.deltaY < 0 ? 0.1 : -0.1); }
     }, { passive: false });
 
     // 图例
-    document.getElementById("legend").innerHTML = Object.keys(TYPE_COLOR).map(t =>
-      '<span class="inline-flex items-center gap-1.5 text-xs text-slate-400"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:' + TYPE_COLOR[t] + '"></span>' + TYPE_LABEL[t] + '</span>'
-    ).join("");
+    document.getElementById("legend").innerHTML = ARTIFACT_DATA.archZones.map(function(z) {
+      return '<span class="inline-flex items-center gap-1.5 text-xs text-slate-400"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:' + z.color + '"></span>' + z.label + '</span>';
+    }).join("") + '<span class="inline-flex items-center gap-1.5 text-xs text-slate-400"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:' + ZONE_COLOR.center + '"></span>Main Loop（心脏）</span>';
 
     // ============================================================
     // 标签页切换
     // ============================================================
     function showPanel(id) {
-      document.querySelectorAll(".tab-btn").forEach(b => {
-        const active = b.dataset.tab === id;
+      document.querySelectorAll(".tab-btn").forEach(function(b) {
+        var active = b.dataset.tab === id;
         b.classList.toggle("tab-active", active);
         b.classList.toggle("text-slate-300", !active);
       });
-      document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+      document.querySelectorAll(".tab-panel").forEach(function(p) { p.classList.add("hidden"); });
       document.getElementById("tab-" + id).classList.remove("hidden");
-      // 触发入场动画
-      const panel = document.getElementById("tab-" + id);
-      panel.querySelectorAll(".fade-up").forEach((el, i) => {
+      var panel = document.getElementById("tab-" + id);
+      panel.querySelectorAll(".fade-up").forEach(function(el, i) {
         el.classList.remove("show");
-        setTimeout(() => el.classList.add("show"), i * 60);
+        setTimeout(function() { el.classList.add("show"); }, i * 60);
       });
-      if (id === "architecture" && window.__renderArch) setTimeout(() => window.__renderArch(), 50);
+      if (id === "architecture" && window.__renderArch) {
+        setTimeout(function() { try { window.__renderArch(); } catch(e) { console.error("架构图渲染失败:", e); } }, 50);
+      }
+      if (window.lucide) lucide.createIcons();
     }
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => showPanel(btn.dataset.tab));
+    document.querySelectorAll(".tab-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() { showPanel(btn.dataset.tab); });
     });
 
     // ============================================================
-    // 对比表
+    // 各标签页内容渲染（独立 try-catch，互不影响）
     // ============================================================
-    document.getElementById("compare-rows").innerHTML = ARTIFACT_DATA.compareRows.map(r => `
-      <tr class="hover:bg-white/[0.02] transition">
-        <td class="px-5 py-3 font-medium text-slate-300 align-top whitespace-nowrap">${escapeHtml(r.dim)}</td>
-        <td class="px-5 py-3 text-slate-400 align-top">${escapeHtml(r.fw)}</td>
-        <td class="px-5 py-3 text-slate-200 align-top">${escapeHtml(r.hs)}</td>
-      </tr>`).join("");
+    try {
+      document.getElementById("compare-rows").innerHTML = ARTIFACT_DATA.compareRows.map(function(r) {
+        return '<tr class="hover:bg-white/[0.02] transition"><td class="px-5 py-3 font-medium text-slate-300 align-top whitespace-nowrap">' + escapeHtml(r.dim) + '</td>' +
+          '<td class="px-5 py-3 text-slate-400 align-top">' + escapeHtml(r.fw) + '</td>' +
+          '<td class="px-5 py-3 text-slate-200 align-top">' + escapeHtml(r.hs) + '</td></tr>';
+      }).join("");
+    } catch(e) { console.error("对比表渲染失败:", e); }
 
-    // ============================================================
-    // 分层详解
-    // ============================================================
-    document.getElementById("layers-grid").innerHTML = ARTIFACT_DATA.layers.map(l => `
-      <div class="glass rounded-2xl p-5 fade-up" style="border-left: 3px solid ${l.color}">
-        <div class="flex items-center gap-2 mb-1">
-          <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg" style="background:${l.color}22"><i data-lucide="${l.icon}" class="h-4 w-4" style="color:${l.color}"></i></span>
-          <span class="font-medium">${escapeHtml(l.title)}</span>
-        </div>
-        <p class="text-xs mb-3" style="color:${l.color}">${escapeHtml(l.role)}</p>
-        <ul class="space-y-2">
-          ${l.points.map(p => `<li class="flex items-start gap-2 text-xs text-slate-400"><span style="color:${l.color}" class="mt-0.5">▸</span><span>${escapeHtml(p)}</span></li>`).join("")}
-        </ul>
-      </div>`).join("");
+    try {
+      document.getElementById("layers-grid").innerHTML = ARTIFACT_DATA.layers.map(function(l) {
+        return '<div class="glass rounded-2xl p-5 fade-up" style="border-left: 3px solid ' + l.color + '">' +
+          '<div class="flex items-center gap-2 mb-1"><span class="inline-flex h-8 w-8 items-center justify-center rounded-lg" style="background:' + l.color + '22"><i data-lucide="' + l.icon + '" class="h-4 w-4" style="color:' + l.color + '"></i></span><span class="font-medium">' + escapeHtml(l.title) + '</span></div>' +
+          '<p class="text-xs mb-3" style="color:' + l.color + '">' + escapeHtml(l.role) + '</p>' +
+          '<ul class="space-y-2">' + l.points.map(function(p) { return '<li class="flex items-start gap-2 text-xs text-slate-400"><span style="color:' + l.color + '" class="mt-0.5">▸</span><span>' + escapeHtml(p) + '</span></li>'; }).join("") + '</ul></div>';
+      }).join("");
+    } catch(e) { console.error("分层详解渲染失败:", e); }
 
-    // ============================================================
-    // 代码骨架
-    // ============================================================
-    document.getElementById("dir-tree").textContent = ARTIFACT_DATA.dirTree;
-    document.getElementById("entry-code").textContent = ARTIFACT_DATA.entryCode;
+    try {
+      document.getElementById("dir-tree").textContent = ARTIFACT_DATA.dirTree;
+      document.getElementById("entry-code").textContent = ARTIFACT_DATA.entryCode;
+    } catch(e) { console.error("代码骨架渲染失败:", e); }
 
-    // ============================================================
-    // 核心论点
-    // ============================================================
-    document.getElementById("keypoints-grid").innerHTML = ARTIFACT_DATA.keypoints.map(k => `
-      <div class="glass rounded-2xl p-5 fade-up">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20"><i data-lucide="${k.icon}" class="h-4 w-4 text-indigo-400"></i></span>
-          <span class="font-medium text-sm">${escapeHtml(k.title)}</span>
-        </div>
-        <p class="text-xs text-slate-400 leading-relaxed">${escapeHtml(k.desc)}</p>
-      </div>`).join("");
+    try {
+      document.getElementById("keypoints-grid").innerHTML = ARTIFACT_DATA.keypoints.map(function(k) {
+        return '<div class="glass rounded-2xl p-5 fade-up"><div class="flex items-center gap-2 mb-2"><span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20"><i data-lucide="' + k.icon + '" class="h-4 w-4 text-indigo-400"></i></span><span class="font-medium text-sm">' + escapeHtml(k.title) + '</span></div><p class="text-xs text-slate-400 leading-relaxed">' + escapeHtml(k.desc) + '</p></div>';
+      }).join("");
+    } catch(e) { console.error("核心论点渲染失败:", e); }
 
     // ============================================================
     // 初始化
     // ============================================================
     showPanel("architecture");
     if (window.lucide) lucide.createIcons();
-
-    // 响应式重绘
-    let resizeTimer;
-    window.addEventListener("resize", () => {
+    var resizeTimer;
+    window.addEventListener("resize", function() {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => { if (window.__renderArch && !document.getElementById("tab-architecture").classList.contains("hidden")) window.__renderArch(); }, 200);
+      resizeTimer = setTimeout(function() {
+        if (window.__renderArch && !document.getElementById("tab-architecture").classList.contains("hidden")) {
+          try { window.__renderArch(); } catch(e) { console.warn(e); }
+        }
+      }, 200);
     });
   </script>
 </body>
