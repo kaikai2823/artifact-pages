@@ -5,29 +5,101 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>架构演进：从 Framework 到 Harness</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>" />
+  <!-- Tailwind CSS v4 -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   <style type="text/tailwindcss">@custom-variant dark (&:where(.dark, .dark *));</style>
+  <!-- Lucide icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <!-- D3.js v7 for custom architecture diagram -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
   <style>
     html { color-scheme: light dark; }
-    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
-    .tab-active { background: rgb(79 70 229); color: white; }
-    .dark .tab-active { background: rgb(99 102 241); }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(ellipse at top, #1e1b4b 0%, #0f172a 45%, #020617 100%);
+      background-attachment: fixed;
+    }
+    html:not(.dark) body {
+      background: radial-gradient(ellipse at top, #eef2ff 0%, #f8fafc 45%, #ffffff 100%);
+    }
+
+    /* 玻璃态卡片 */
+    .glass {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    html:not(.dark) .glass {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: 0 4px 24px -8px rgba(15, 23, 42, 0.08);
+    }
+
+    /* 标签页 */
+    .tab-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+    .tab-active {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border-color: transparent !important;
+      box-shadow: 0 4px 14px -2px rgba(99, 102, 241, 0.5);
+    }
+
+    /* 卡片入场动画 */
+    .fade-up { opacity: 0; transform: translateY(16px); }
+    .fade-up.show { opacity: 1; transform: translateY(0); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+    /* D3 架构图样式 */
+    #arch-svg { width: 100%; height: 100%; display: block; }
+    .arch-layer-bg { rx: 14; }
+    .arch-layer-label { font-weight: 600; font-size: 13px; }
+    .arch-node-group { cursor: pointer; }
+    .arch-node-circle { transition: all 0.2s ease; }
+    .arch-node-group:hover .arch-node-circle { filter: brightness(1.25) drop-shadow(0 0 8px currentColor); }
+    .arch-node-label { font-size: 11px; font-weight: 500; pointer-events: none; text-anchor: middle; }
+    .arch-node-icon { font-size: 16px; text-anchor: middle; pointer-events: none; }
+    .arch-link { fill: none; stroke-opacity: 0.4; }
+    .arch-link.highlighted { stroke-opacity: 0.9; stroke-width: 2.5; }
+    .arch-link.dimmed { stroke-opacity: 0.08; }
+    .arch-node-group.dimmed { opacity: 0.25; }
+
+    /* tooltip */
+    #arch-tooltip {
+      position: absolute; pointer-events: none; opacity: 0;
+      transition: opacity 0.15s ease; z-index: 50; max-width: 260px;
+    }
+
+    /* 滚动条美化 */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.5); }
+
+    /* 代码块 */
+    .code-block {
+      font-family: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: rgba(2, 6, 23, 0.5);
+    }
+    html:not(.dark) .code-block { background: #1e293b; color: #e2e8f0; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased">
+<body class="text-slate-900 dark:text-slate-100 min-h-screen antialiased">
 
-  <header class="sticky top-0 z-20 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
+  <header class="sticky top-0 z-30 border-b border-white/5 bg-slate-950/60 backdrop-blur-xl dark:bg-slate-950/60">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-2 min-w-0">
-        <span id="emoji" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white"><i data-lucide="network" class="h-4 w-4"></i></span>
-        <span id="title" class="font-semibold truncate">架构演进：从 Framework 到 Harness</span>
-        <span id="version" class="text-xs text-slate-400"></span>
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/30">
+          <i data-lucide="network" class="h-4 w-4"></i>
+        </span>
+        <div class="min-w-0">
+          <div id="title" class="font-semibold truncate text-sm">架构演进：从 Framework 到 Harness</div>
+          <div class="text-[10px] text-slate-400">kaiclaw · 第一讲</div>
+        </div>
+        <span id="version" class="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"></span>
       </div>
       <button id="themeToggle" type="button" aria-label="Toggle dark mode"
-        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
-        <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 hover:bg-white/10 transition">
+        <i data-lucide="sun" class="h-4 w-4 hidden dark:block text-amber-300"></i>
         <i data-lucide="moon" class="h-4 w-4 dark:hidden"></i>
       </button>
     </div>
@@ -35,88 +107,90 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
     <!-- 课程信息条 -->
-    <div class="mb-6 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-4 py-3 text-sm">
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span class="font-medium">📚 《从 0 开始构建 Agent Harness》</span>
-        <span class="text-slate-500 dark:text-slate-400">第一讲 · Tony Bai</span>
-        <span class="text-slate-500 dark:text-slate-400">核心命题：<span class="font-medium text-indigo-600 dark:text-indigo-400">框架层正在坍塌，驾驭工程正在崛起</span></span>
+    <div class="mb-6 glass rounded-2xl px-5 py-3.5 text-sm fade-up">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <span class="font-medium flex items-center gap-1.5"><i data-lucide="book-open" class="h-3.5 w-3.5 text-indigo-400"></i>《从 0 开始构建 Agent Harness》</span>
+        <span class="text-slate-400">第一讲 · Tony Bai</span>
+        <span class="hidden sm:inline text-slate-600">|</span>
+        <span class="text-slate-300 dark:text-slate-400">核心命题：<span class="font-medium bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">框架层正在坍塌，驾驭工程正在崛起</span></span>
       </div>
     </div>
 
-    <!-- 标签页切换 -->
-    <div class="mb-6 flex flex-wrap gap-2">
-      <button data-tab="architecture" class="tab-btn tab-active inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 transition">
+    <!-- 标签页 -->
+    <div class="mb-6 flex flex-wrap gap-2 fade-up">
+      <button data-tab="architecture" class="tab-btn tab-active inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10">
         <i data-lucide="git-fork" class="h-3.5 w-3.5"></i>四层架构蓝图
       </button>
-      <button data-tab="compare" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+      <button data-tab="compare" class="tab-btn inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10 text-slate-300 hover:bg-white/5">
         <i data-lucide="scale" class="h-3.5 w-3.5"></i>Framework vs Harness
       </button>
-      <button data-tab="layers" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+      <button data-tab="layers" class="tab-btn inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10 text-slate-300 hover:bg-white/5">
         <i data-lucide="layers" class="h-3.5 w-3.5"></i>分层详解
       </button>
-      <button data-tab="skeleton" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+      <button data-tab="skeleton" class="tab-btn inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10 text-slate-300 hover:bg-white/5">
         <i data-lucide="folder-tree" class="h-3.5 w-3.5"></i>代码骨架
       </button>
-      <button data-tab="keypoints" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+      <button data-tab="keypoints" class="tab-btn inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium border border-white/10 text-slate-300 hover:bg-white/5">
         <i data-lucide="lightbulb" class="h-3.5 w-3.5"></i>核心论点
       </button>
     </div>
 
-    <!-- TAB 1: 架构图 -->
+    <!-- TAB 1: D3 架构图 -->
     <section id="tab-architecture" class="tab-panel">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200 dark:border-slate-800">
-            <span class="text-sm font-medium">go-tiny-claw 四层架构（Main Loop 运行时）</span>
-            <div class="flex items-center gap-1">
-              <button id="zout" type="button" aria-label="Zoom out" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"><i data-lucide="zoom-out" class="h-4 w-4"></i></button>
-              <button id="zreset" type="button" class="inline-flex h-8 px-2 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs">Reset</button>
-              <button id="zin" type="button" aria-label="Zoom in" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"><i data-lucide="zoom-in" class="h-4 w-4"></i></button>
-            </div>
+      <div class="glass rounded-2xl overflow-hidden fade-up">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-white/5">
+          <div class="flex items-center gap-2">
+            <i data-lucide="git-fork" class="h-4 w-4 text-indigo-400"></i>
+            <span class="text-sm font-medium">go-tiny-claw 四层架构（D3 交互式）</span>
+            <span class="text-[10px] text-slate-500 hidden sm:inline">悬停高亮 · 点击锁定 · 拖拽节点</span>
           </div>
-          <div id="stage" class="overflow-auto p-4" style="max-height: 70vh;">
-            <div id="diagram" class="origin-top-left transition-transform"></div>
+          <div class="flex items-center gap-1">
+            <button id="zout" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 hover:bg-white/10 transition"><i data-lucide="zoom-out" class="h-4 w-4"></i></button>
+            <button id="zreset" type="button" class="inline-flex h-8 px-2.5 items-center justify-center rounded-lg border border-white/10 hover:bg-white/10 transition text-xs">Reset</button>
+            <button id="zin" type="button" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 hover:bg-white/10 transition"><i data-lucide="zoom-in" class="h-4 w-4"></i></button>
           </div>
         </div>
-        <aside class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-          <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
-            <span class="text-sm font-medium">组件清单</span>
-          </div>
-          <div class="divide-y divide-slate-100 dark:divide-slate-800" id="components"></div>
-        </aside>
+        <div id="arch-container" class="relative w-full" style="height: 620px;">
+          <svg id="arch-svg"></svg>
+          <div id="arch-tooltip" class="glass rounded-xl px-3.5 py-2.5 text-xs shadow-2xl"></div>
+        </div>
+      </div>
+      <!-- 图例 -->
+      <div class="mt-4 flex flex-wrap items-center gap-3 fade-up">
+        <span class="text-xs text-slate-400">类型：</span>
+        <div id="legend" class="flex flex-wrap gap-3"></div>
       </div>
     </section>
 
     <!-- TAB 2: 对比 -->
     <section id="tab-compare" class="tab-panel hidden">
-      <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-        <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800"><span class="text-sm font-medium">传统 Framework vs 现代 Harness</span></div>
+      <div class="glass rounded-2xl overflow-hidden fade-up">
+        <div class="px-5 py-3 border-b border-white/5 flex items-center gap-2"><i data-lucide="scale" class="h-4 w-4 text-indigo-400"></i><span class="text-sm font-medium">传统 Framework vs 现代 Harness</span></div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+            <thead class="bg-white/[0.03] text-slate-400 text-xs uppercase tracking-wide">
               <tr>
-                <th class="text-left px-4 py-2.5 font-medium">维度</th>
-                <th class="text-left px-4 py-2.5 font-medium text-rose-600 dark:text-rose-400">Framework（框架）</th>
-                <th class="text-left px-4 py-2.5 font-medium text-emerald-600 dark:text-emerald-400">Harness（驾驭工程）</th>
+                <th class="text-left px-5 py-3 font-medium">维度</th>
+                <th class="text-left px-5 py-3 font-medium text-rose-400">Framework（框架）</th>
+                <th class="text-left px-5 py-3 font-medium text-emerald-400">Harness（驾驭工程）</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800" id="compare-rows"></tbody>
+            <tbody class="divide-y divide-white/5" id="compare-rows"></tbody>
           </table>
         </div>
       </div>
-      <!-- 三大革命性转变 -->
-      <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
-          <div class="flex items-center gap-2 mb-2"><i data-lucide="repeat" class="h-4 w-4 text-indigo-600 dark:text-indigo-400"></i><span class="font-medium text-sm">控制反转（IoC）</span></div>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">业务流程控制权从「代码」完全转移到大模型的「实时推理」。代码只提供物理定律（文件读写、沙箱），不干涉任务走向。</p>
+      <div class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-5 fade-up">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="repeat" class="h-4 w-4 text-indigo-400"></i><span class="font-medium text-sm">控制反转（IoC）</span></div>
+          <p class="text-xs text-slate-400 leading-relaxed">业务流程控制权从「代码」完全转移到大模型的「实时推理」。代码只提供物理定律（文件读写、沙箱），不干涉任务走向。</p>
         </div>
-        <div class="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4">
-          <div class="flex items-center gap-2 mb-2"><i data-lucide="shield-alert" class="h-4 w-4 text-amber-600 dark:text-amber-400"></i><span class="font-medium text-sm">防线前移</span></div>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">大模型是自由的，就可能犯错/搞破坏。核心代码集中在 Middleware（防搞破坏）和 Compactor（防内存撑爆）。</p>
+        <div class="glass rounded-2xl p-5 fade-up">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="shield-alert" class="h-4 w-4 text-amber-400"></i><span class="font-medium text-sm">防线前移</span></div>
+          <p class="text-xs text-slate-400 leading-relaxed">大模型是自由的，就可能犯错/搞破坏。核心代码集中在 Middleware（防搞破坏）和 Compactor（防内存撑爆）。</p>
         </div>
-        <div class="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
-          <div class="flex items-center gap-2 mb-2"><i data-lucide="eye" class="h-4 w-4 text-emerald-600 dark:text-emerald-400"></i><span class="font-medium text-sm">状态透明</span></div>
-          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">循环只依赖单一数据结构——不断累加的 Context 消息列表。没有任何隐式的树节点或图节点变量。</p>
+        <div class="glass rounded-2xl p-5 fade-up">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="eye" class="h-4 w-4 text-emerald-400"></i><span class="font-medium text-sm">状态透明</span></div>
+          <p class="text-xs text-slate-400 leading-relaxed">循环只依赖单一数据结构——不断累加的 Context 消息列表。没有任何隐式的树节点或图节点变量。</p>
         </div>
       </div>
     </section>
@@ -128,37 +202,36 @@
 
     <!-- TAB 4: 代码骨架 -->
     <section id="tab-skeleton" class="tab-panel hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2"><i data-lucide="folder-tree" class="h-4 w-4 text-indigo-600 dark:text-indigo-400"></i><span class="text-sm font-medium">项目目录布局</span></div>
-          <pre class="p-4 text-xs overflow-x-auto leading-relaxed"><code id="dir-tree"></code></pre>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="glass rounded-2xl overflow-hidden fade-up">
+          <div class="px-5 py-3 border-b border-white/5 flex items-center gap-2"><i data-lucide="folder-tree" class="h-4 w-4 text-indigo-400"></i><span class="text-sm font-medium">项目目录布局</span></div>
+          <pre class="p-5 text-xs overflow-x-auto leading-relaxed code-block"><code id="dir-tree"></code></pre>
         </div>
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-          <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2"><i data-lucide="terminal" class="h-4 w-4 text-emerald-600 dark:text-emerald-400"></i><span class="text-sm font-medium">入口启动伪代码（main.go）</span></div>
-          <pre class="p-4 text-xs overflow-x-auto leading-relaxed"><code id="entry-code"></code></pre>
+        <div class="glass rounded-2xl overflow-hidden fade-up">
+          <div class="px-5 py-3 border-b border-white/5 flex items-center gap-2"><i data-lucide="terminal" class="h-4 w-4 text-emerald-400"></i><span class="text-sm font-medium">入口启动伪代码（main.go）</span></div>
+          <pre class="p-5 text-xs overflow-x-auto leading-relaxed code-block"><code id="entry-code"></code></pre>
         </div>
       </div>
     </section>
 
     <!-- TAB 5: 核心论点 -->
     <section id="tab-keypoints" class="tab-panel hidden">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="keypoints-grid"></div>
-      <!-- 思考题 -->
-      <div class="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/50 dark:bg-violet-950/20 p-5">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5" id="keypoints-grid"></div>
+      <div class="glass rounded-2xl p-6 fade-up border-violet-500/20">
         <div class="flex items-center gap-2 mb-3">
-          <i data-lucide="help-circle" class="h-5 w-5 text-violet-600 dark:text-violet-400"></i>
+          <i data-lucide="help-circle" class="h-5 w-5 text-violet-400"></i>
           <span class="font-medium">课后思考题</span>
         </div>
-        <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-2">经典 OS 在内存（RAM）不足时会触发 <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">OOM Killer</span> 强杀进程，或把不常用内存页置换到磁盘（Swap）。</p>
-        <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">结合 Harness 理念，当大模型上下文窗口逼近极限（如 128k Tokens）时，go-tiny-claw 引擎应采取哪些类似 OS 的策略，来避免 Agent 因 API 报错而彻底崩溃失忆？</p>
-        <p class="mt-3 text-xs text-violet-600 dark:text-violet-400 italic">提示 → 答案就在后续「上下文工程层」的 Token 监控与阶梯压缩器中。</p>
+        <p class="text-sm text-slate-300 dark:text-slate-300 leading-relaxed mb-2">经典 OS 在内存（RAM）不足时会触发 <code class="text-xs bg-white/10 px-1.5 py-0.5 rounded">OOM Killer</code> 强杀进程，或把不常用内存页置换到磁盘（Swap）。</p>
+        <p class="text-sm text-slate-300 leading-relaxed">结合 Harness 理念，当大模型上下文窗口逼近极限（如 128k Tokens）时，go-tiny-claw 引擎应采取哪些类似 OS 的策略，来避免 Agent 因 API 报错而彻底崩溃失忆？</p>
+        <p class="mt-3 text-xs text-violet-400 italic flex items-center gap-1"><i data-lucide="lightbulb" class="h-3 w-3"></i>提示 → 答案就在后续「上下文工程层」的 Token 监控与阶梯压缩器中。</p>
       </div>
     </section>
   </main>
 
-  <footer class="border-t border-slate-200 dark:border-slate-800 mt-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-xs text-slate-400 flex items-center justify-between">
-      <span>kaiclaw · 第一讲梳理 · 基于 artifact 技能生成</span>
+  <footer class="border-t border-white/5 mt-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-xs text-slate-500 flex items-center justify-between">
+      <span>kaiclaw · 第一讲梳理 · D3.js + Tailwind 重构</span>
       <span id="footer-meta"></span>
     </div>
   </footer>
@@ -170,73 +243,64 @@
     const ARTIFACT_META = {
       title: "架构演进：从 Framework 到 Harness",
       emoji: "🧭",
-      version: 1,
+      version: 2,
       createdAt: "2026-07-23T00:00:00",
       updatedAt: "2026-07-23T00:00:00"
     };
 
     // ============================================================
-    // ARTIFACT DATA — edit this block to refresh the page.
+    // ARTIFACT DATA
     // ============================================================
     const ARTIFACT_DATA = {
       generatedAt: "2026-07-23",
-      title: "架构演进：从 Framework 到 Harness",
-      // go-tiny-claw 四层架构 Main Loop 图
-      diagram: `flowchart TB
-        subgraph Entry["入口交互层"]
-          CLI["终端 CLI 输入"]
-          FEISHU["飞书机器人接入"]
-          HITL["人工审批 Human-in-the-Loop<br/>异步回调"]
-        end
-        subgraph Core["核心引擎层（心脏）"]
-          LOOP["Main Loop<br/>ReAct 循环"]
-          THINK["Thinking 模块<br/>强制慢思考"]
-          ADAPTER["大模型适配器<br/>抹平 Claude/OpenAI 差异"]
-        end
-        subgraph Context["上下文工程层（内存管理器）"]
-          PROMPT["Prompt 动态组装器<br/>读取 AGENTS.md"]
-          COMPACT["Token 监控与<br/>阶梯压缩器"]
-          REMIND["运行时事件提醒注入"]
-          MEM["基于文件系统的<br/>状态与记忆 TODO.md"]
-        end
-        subgraph Tools["工具与执行层（四肢）"]
-          REG["动态 ToolRegistry"]
-          TOOL["极简工具集<br/>read/write/edit/bash"]
-          MW["Middleware<br/>拦截危险命令 + 审批"]
-        end
-        LLM["🧠 大模型 = CPU<br/>自主规划与推理"]
 
-        CLI --> LOOP
-        FEISHU --> LOOP
-        HITL -.-> MW
-        LOOP <-->|推理/响应| LLM
-        LOOP --> THINK
-        LOOP --> ADAPTER
-        LOOP --> PROMPT
-        LOOP --> COMPACT
-        LOOP --> REMIND
-        LOOP --> MEM
-        LOOP --> REG
-        REG --> TOOL
-        TOOL --> MW
-        MW -->|执行| PHYSICAL["🌍 物理世界"]`,
-
-      components: [
-        { name: "Main Loop",          type: "core",     desc: "系统心脏。维持 ReAct 循环（思考→行动→观察），是 Agent 的心跳。" },
-        { name: "大模型 (CPU)",       type: "external", desc: "拥有极强自主规划能力的 CPU。不需要代码规定流程，靠实时推理决定走向。" },
-        { name: "Thinking 模块",      type: "core",     desc: "在行动前强制模型进行慢思考，剥离独立的 Thinking 阶段。" },
-        { name: "大模型适配器",        type: "adapter",  desc: "抹平 Claude、OpenAI 兼容等厂商 API 差异的「大脑接口」。" },
-        { name: "Prompt 动态组装器",   type: "context",  desc: "动态拼装模块化的系统规则（如读取 AGENTS.md），告别面条代码。" },
-        { name: "Token 压缩器",       type: "context",  desc: "像 OS 内存回收器，盯 Token 水位线触发阶梯压缩（ContextCompaction）。" },
-        { name: "事件提醒注入",        type: "context",  desc: "防走神利器，在模型决策前一刻注入干预指令（SystemReminders）。" },
-        { name: "文件系统记忆",        type: "context",  desc: "极简哲学核心：抛弃内部变量，直接把进度写在本地 TODO.md。" },
-        { name: "ToolRegistry",       type: "tools",    desc: "动态工具注册表，配合极简工具集组合出无限可能。" },
-        { name: "极简工具集",          type: "tools",    desc: "read/write/edit/bash 四件套，大道至简的 YOLO 执行哲学。" },
-        { name: "Middleware",         type: "tools",    desc: "死守大门：拦截高危命令、对接飞书人工审批，防线前移。" },
-        { name: "入口交互层",          type: "entry",    desc: "引擎触角：CLI 输入、飞书接入，含 Human-in-the-loop 异步回调。" }
+      // D3 架构图：节点 + 连线 + 分层定义
+      // layer: 0=入口 1=核心 2=上下文 3=工具 ; 特殊层: -1=大模型 -2=物理世界
+      archLayers: [
+        { id: "entry",   name: "入口交互层",     subtitle: "引擎触角",       y: 0,   color: "#6366f1" },
+        { id: "core",    name: "核心引擎层",     subtitle: "心脏",           y: 1,   color: "#f43f5e" },
+        { id: "context", name: "上下文工程层",   subtitle: "内存管理器",     y: 2,   color: "#f59e0b" },
+        { id: "tools",   name: "工具与执行层",   subtitle: "四肢",           y: 3,   color: "#10b981" }
+      ],
+      archNodes: [
+        // 入口层
+        { id: "CLI",     label: "终端 CLI",          detail: "终端命令行输入，引擎对外的触角之一。",            layer: "entry",   icon: "💻", type: "entry" },
+        { id: "FEISHU",  label: "飞书机器人",         detail: "接入飞书机器人的事件流，打通真实世界。",          layer: "entry",   icon: "💬", type: "entry" },
+        { id: "HITL",    label: "人工审批回调",       detail: "Human-in-the-loop 异步回调机制。",               layer: "entry",   icon: "✋", type: "entry" },
+        // 核心层
+        { id: "LOOP",    label: "Main Loop",         detail: "系统心脏。维持 ReAct 循环（思考→行动→观察），是 Agent 的心跳。", layer: "core", icon: "🔄", type: "core" },
+        { id: "THINK",   label: "Thinking 模块",     detail: "在行动前强制模型进行慢思考，剥离独立的 Thinking 阶段。", layer: "core", icon: "🧩", type: "core" },
+        { id: "ADAPTER", label: "大模型适配器",       detail: "抹平 Claude、OpenAI 兼容等厂商 API 差异的「大脑接口」。",     layer: "core", icon: "🔌", type: "adapter" },
+        // 上下文层
+        { id: "PROMPT",  label: "Prompt 组装器",     detail: "动态拼装模块化的系统规则（如读取 AGENTS.md），告别面条代码。", layer: "context", icon: "📝", type: "context" },
+        { id: "COMPACT", label: "Token 压缩器",      detail: "像 OS 内存回收器，盯 Token 水位线触发阶梯压缩（ContextCompaction）。", layer: "context", icon: "🗜️", type: "context" },
+        { id: "REMIND",  label: "事件提醒注入",       detail: "防走神利器，在模型决策前一刻注入干预指令（SystemReminders）。",   layer: "context", icon: "🔔", type: "context" },
+        { id: "MEM",     label: "文件系统记忆",       detail: "极简哲学核心：抛弃内部变量，直接把进度写在本地 TODO.md。",         layer: "context", icon: "💾", type: "context" },
+        // 工具层
+        { id: "REG",     label: "ToolRegistry",      detail: "动态工具注册表，配合极简工具集组合出无限可能。",     layer: "tools",   icon: "🧰", type: "tools" },
+        { id: "TOOL",    label: "极简工具集",         detail: "read/write/edit/bash 四件套，大道至简的 YOLO 执行哲学。", layer: "tools", icon: "🔧", type: "tools" },
+        { id: "MW",      label: "Middleware",        detail: "死守大门：拦截高危命令、对接飞书人工审批，防线前移。",     layer: "tools",   icon: "🛡️", type: "tools" },
+        // 外部实体
+        { id: "LLM",     label: "大模型 = CPU",      detail: "拥有极强自主规划能力的 CPU。不需要代码规定流程，靠实时推理决定走向。", layer: "core",   icon: "🧠", type: "external", special: "llm" },
+        { id: "PHYSICAL",label: "物理世界",          detail: "Agent 通过工具最终改变的物理世界（文件系统、终端、飞书消息等）。",     layer: "tools",   icon: "🌍", type: "external", special: "physical" }
+      ],
+      archLinks: [
+        { source: "CLI",     target: "LOOP",    label: "输入" },
+        { source: "FEISHU",  target: "LOOP",    label: "事件" },
+        { source: "HITL",    target: "MW",      label: "审批", dashed: true },
+        { source: "LOOP",    target: "LLM",     label: "推理/响应", bidirectional: true, highlighted: true },
+        { source: "LOOP",    target: "THINK",   label: "" },
+        { source: "LOOP",    target: "ADAPTER", label: "" },
+        { source: "LOOP",    target: "PROMPT",  label: "" },
+        { source: "LOOP",    target: "COMPACT", label: "" },
+        { source: "LOOP",    target: "REMIND",  label: "" },
+        { source: "LOOP",    target: "MEM",     label: "" },
+        { source: "LOOP",    target: "REG",     label: "" },
+        { source: "REG",     target: "TOOL",    label: "" },
+        { source: "TOOL",    target: "MW",      label: "" },
+        { source: "MW",      target: "PHYSICAL",label: "执行" }
       ],
 
-      // Framework vs Harness 对比行
       compareRows: [
         { dim: "诞生时代",      fw: "GPT-3 时代，模型缺乏规划与工具调用能力",            hs: "Claude 3.5 / GPT-4o 时代，模型成为有自主规划能力的 CPU" },
         { dim: "核心结构",      fw: "链（Chain）+ 有向无环图（DAG）",                  hs: "无限循环（Main Loop）+ 事件驱动拦截器（Middleware）" },
@@ -249,19 +313,17 @@
         { dim: "类比",          fw: "开发者手写的流水线",                              hs: "为大模型编写的微型操作系统（OS）" }
       ],
 
-      // 四层详解
       layers: [
-        { color: "indigo", icon: "door-open",    title: "入口交互层",     role: "引擎对外的触角",
+        { color: "#6366f1", icon: "door-open",    title: "入口交互层",     role: "引擎对外的触角",
           points: ["终端命令行（CLI）输入", "接入飞书机器人", "人工审批（Human-in-the-loop）异步回调机制"] },
-        { color: "rose",   icon: "heart-pulse",  title: "核心引擎层（心脏）", role: "系统的控制中枢",
+        { color: "#f43f5e", icon: "heart-pulse",  title: "核心引擎层（心脏）", role: "系统的控制中枢",
           points: ["Main Loop 维持 ReAct 循环", "大模型适配器抹平 Claude/OpenAI 差异", "Thinking 模块强制慢思考"] },
-        { color: "amber",  icon: "database",     title: "上下文工程层（内存）", role: "决定 Agent 能跑多远",
+        { color: "#f59e0b", icon: "database",     title: "上下文工程层（内存）", role: "决定 Agent 能跑多远",
           points: ["Prompt 动态组装器（读 AGENTS.md）", "Token 监控与阶梯压缩器", "运行时事件提醒注入", "文件系统状态与记忆 TODO.md"] },
-        { color: "emerald",icon: "wrench",       title: "工具与执行层（四肢）", role: "改变物理世界的组件",
+        { color: "#10b981", icon: "wrench",       title: "工具与执行层（四肢）", role: "改变物理世界的组件",
           points: ["动态 ToolRegistry", "极简工具集 read/write/edit/bash", "Middleware 拦截危险命令 + 审批"] }
       ],
 
-      // 目录树
       dirTree: `go-tiny-claw/
 ├── cmd/
 │   └── claw/
@@ -276,7 +338,6 @@
 ├── go.mod
 └── README.md`,
 
-      // 入口代码
       entryCode: `package main
 
 import (
@@ -305,132 +366,367 @@ func main() {
     log.Println("架构蓝图搭建完毕，等待各核心模块注入！")
 }`,
 
-      // 核心论点
       keypoints: [
-        { icon: "break",       title: "突破「调包」局限",   desc: "生产中遇到上下文溢出、死循环、行为失控时，改 Prompt 或依赖厚重 Framework 往往无济于事——静态 DAG 无法应对千变万化的真实世界。" },
-        { icon: "cpu",         title: "Harness 的本质",     desc: "Agent 的尽头是 OS。大模型=CPU，Context=内存。Harness 工程就是为大模型编写微型 OS：调度 Main Loop、回收 Context 内存、安全管控工具、处理中断。" },
-        { icon: "map",         title: "确立架构蓝图",       desc: "推导出四层架构（入口交互/核心引擎/上下文工程/工具执行），用 Go 搭建高内聚工程骨架，写下串联各大模块的启动伪代码。" }
+        { icon: "break", title: "突破「调包」局限",   desc: "生产中遇到上下文溢出、死循环、行为失控时，改 Prompt 或依赖厚重 Framework 往往无济于事——静态 DAG 无法应对千变万化的真实世界。" },
+        { icon: "cpu",   title: "Harness 的本质",     desc: "Agent 的尽头是 OS。大模型=CPU，Context=内存。Harness 工程就是为大模型编写微型 OS：调度 Main Loop、回收 Context 内存、安全管控工具、处理中断。" },
+        { icon: "map",   title: "确立架构蓝图",       desc: "推导出四层架构（入口交互/核心引擎/上下文工程/工具执行），用 Go 搭建高内聚工程骨架，写下串联各大模块的启动伪代码。" }
       ]
     };
 
-    const TYPE_BADGE = {
-      core:     "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-      adapter:  "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-      context:  "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-      tools:    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-      entry:    "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
-      external: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+    // ============================================================
+    // 类型配色（与分层详解一致）
+    // ============================================================
+    const TYPE_COLOR = {
+      entry: "#6366f1", core: "#f43f5e", adapter: "#0ea5e9",
+      context: "#f59e0b", tools: "#10b981", external: "#8b5cf6"
+    };
+    const TYPE_LABEL = {
+      entry: "入口", core: "核心", adapter: "适配器",
+      context: "上下文", tools: "工具", external: "外部"
     };
 
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
-    // ---- Theme ----
+    // ============================================================
+    // 主题
+    // ============================================================
     function safeStore(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
     (function () { try { if (safeStore("artifact-theme") === "light") document.documentElement.classList.remove("dark"); } catch {} })();
     document.getElementById("themeToggle").addEventListener("click", () => {
       const isDark = document.documentElement.classList.toggle("dark");
       safeStore("artifact-theme", isDark ? "dark" : "light");
-      if (window.mermaid) renderDiagram();
+      if (window.__renderArch) window.__renderArch();
     });
 
-    // ---- Header + footer ----
-    document.getElementById("title").textContent = ARTIFACT_DATA.title;
+    // ============================================================
+    // Header / footer
+    // ============================================================
     document.getElementById("version").textContent = "v" + ARTIFACT_META.version;
     document.getElementById("footer-meta").textContent = "v" + ARTIFACT_META.version + " · " + ARTIFACT_META.createdAt.slice(0,10);
 
-    // ---- Components panel ----
-    document.getElementById("components").innerHTML = ARTIFACT_DATA.components.map(c => `
-      <div class="px-4 py-3">
-        <div class="flex items-center gap-2">
-          <span class="font-medium text-sm">${escapeHtml(c.name)}</span>
-          <span class="text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 ${TYPE_BADGE[c.type] || TYPE_BADGE.external}">${escapeHtml(c.type)}</span>
-        </div>
-        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">${escapeHtml(c.desc)}</p>
-      </div>`).join("");
+    // ============================================================
+    // D3 架构图渲染
+    // ============================================================
+    window.__renderArch = function () {
+      const container = document.getElementById("arch-container");
+      const svg = d3.select("#arch-svg");
+      svg.selectAll("*").remove();
 
-    // ---- Mermaid ----
-    let seq = 0;
-    function renderDiagram() {
-      if (!window.mermaid) return;
-      const host = document.getElementById("diagram");
       const isDark = document.documentElement.classList.contains("dark");
-      mermaid.initialize({ startOnLoad: false, theme: isDark ? "dark" : "default", securityLevel: "loose", flowchart: { useMaxWidth: true, htmlLabels: true } });
-      const id = "m" + (seq++);
-      mermaid.render(id, ARTIFACT_DATA.diagram)
-        .then(({ svg }) => { host.innerHTML = svg; })
-        .catch(err => { host.innerHTML = `<p class="text-rose-500 text-sm">Diagram error: ${escapeHtml(err.message || err)}</p>`; });
-    }
+      const W = container.clientWidth;
+      const H = container.clientHeight;
 
-    // ---- Zoom ----
-    let zoom = 1;
-    const diagramEl = document.getElementById("diagram");
-    const applyZoom = () => { diagramEl.style.transform = `scale(${zoom})`; };
-    const clamp = z => Math.max(0.3, Math.min(3, z));
-    document.getElementById("zin").addEventListener("click", () => { zoom = clamp(zoom + 0.15); applyZoom(); });
-    document.getElementById("zout").addEventListener("click", () => { zoom = clamp(zoom - 0.15); applyZoom(); });
-    document.getElementById("zreset").addEventListener("click", () => { zoom = 1; applyZoom(); });
-    document.getElementById("stage").addEventListener("wheel", e => {
-      if (e.ctrlKey) { e.preventDefault(); zoom = clamp(zoom + (e.deltaY < 0 ? 0.1 : -0.1)); applyZoom(); }
+      // 分层 Y 坐标（特殊节点单独定位）
+      const layerCount = ARTIFACT_DATA.archLayers.length;
+      const layerH = (H - 60) / layerCount;
+      const layerY = {};
+      ARTIFACT_DATA.archLayers.forEach((l, i) => { layerY[l.id] = 50 + i * layerH + layerH / 2; });
+
+      // 构建节点副本，赋予坐标（special 节点不参与层内等分）
+      const layerGroups = {};
+      ARTIFACT_DATA.archNodes.forEach(n => {
+        if (n.special) return; // LLM/PHYSICAL 单独定位
+        (layerGroups[n.layer] = layerGroups[n.layer] || []).push(n);
+      });
+      const nodes = ARTIFACT_DATA.archNodes.map(n => {
+        if (n.special) return Object.assign({}, n, { x: 0, y: 0 });
+        const sibs = layerGroups[n.layer] || [n];
+        const idx = sibs.indexOf(n);
+        const span = W * 0.86;
+        const startX = W * 0.07;
+        const step = sibs.length > 1 ? span / (sibs.length - 1) : 0;
+        return Object.assign({}, n, {
+          x: sibs.length === 1 ? W / 2 : startX + idx * step,
+          y: layerY[n.layer]
+        });
+      });
+      const nodeMap = {}; nodes.forEach(n => nodeMap[n.id] = n);
+
+      // 特殊节点：LLM 放在核心层上方偏右，PHYSICAL 放在最底
+      if (nodeMap.LLM)      { nodeMap.LLM.y = layerY["core"] - 95; nodeMap.LLM.x = W * 0.82; }
+      if (nodeMap.PHYSICAL) { nodeMap.PHYSICAL.y = H - 35; nodeMap.PHYSICAL.x = W * 0.82; }
+
+      const links = ARTIFACT_DATA.archLinks.map(l => ({
+        source: nodeMap[l.source],
+        target: nodeMap[l.target],
+        label: l.label, dashed: l.dashed, bidirectional: l.bidirectional, highlighted: l.highlighted
+      })).filter(l => l.source && l.target);
+
+      // defs：箭头 marker
+      const defs = svg.append("defs");
+      Object.keys(TYPE_COLOR).forEach(t => {
+        defs.append("marker").attr("id", "arrow-" + t)
+          .attr("viewBox", "0 -5 10 10").attr("refX", 8).attr("refY", 0)
+          .attr("markerWidth", 6).attr("markerHeight", 6).attr("orient", "auto")
+          .append("path").attr("d", "M0,-5L10,0L0,5")
+          .attr("fill", isDark ? "rgba(203,213,225,0.6)" : "rgba(71,85,105,0.6)");
+      });
+      const glow = defs.append("filter").attr("id", "node-glow").attr("x", "-50%").attr("y", "-50%").attr("width", "200%").attr("height", "200%");
+      glow.append("feGaussianBlur").attr("stdDeviation", 4).attr("result", "blur");
+      const fm = glow.append("feMerge"); fm.append("feMergeNode").attr("in", "blur"); fm.append("feMergeNode").attr("in", "SourceGraphic");
+
+      // 分层背景带
+      const layerBg = svg.append("g").attr("class", "layers");
+      ARTIFACT_DATA.archLayers.forEach(l => {
+        const y0 = 50 + l.y * layerH / 1 + (ARTIFACT_DATA.archLayers.indexOf(l)) * layerH;
+        const yPos = 50 + ARTIFACT_DATA.archLayers.indexOf(l) * layerH + 8;
+        const g = layerBg.append("g");
+        g.append("rect")
+          .attr("x", 12).attr("y", yPos).attr("width", W - 24).attr("height", layerH - 16)
+          .attr("rx", 14)
+          .attr("fill", l.color)
+          .attr("fill-opacity", isDark ? 0.04 : 0.05)
+          .attr("stroke", l.color).attr("stroke-opacity", 0.15).attr("stroke-width", 1);
+        g.append("circle").attr("cx", 28).attr("cy", yPos + 18).attr("r", 4).attr("fill", l.color);
+        g.append("text").attr("x", 40).attr("y", yPos + 22)
+          .attr("fill", isDark ? "#cbd5e1" : "#475569")
+          .attr("class", "arch-layer-label")
+          .text(l.name + " · " + l.subtitle);
+      });
+
+      // 连线（曲线）
+      const linkG = svg.append("g").attr("class", "links");
+      const linkEls = linkG.selectAll("path").data(links).enter().append("path")
+        .attr("class", d => "arch-link" + (d.highlighted ? " highlighted" : ""))
+        .attr("stroke", d => {
+          if (d.highlighted) return "#8b5cf6";
+          return isDark ? "rgba(148,163,184,0.4)" : "rgba(100,116,139,0.4)";
+        })
+        .attr("stroke-width", d => d.highlighted ? 2.5 : 1.2)
+        .attr("stroke-dasharray", d => d.dashed ? "5,4" : null)
+        .attr("marker-end", d => "url(#arrow-" + (d.target.type || "core") + ")")
+        .attr("marker-start", d => d.bidirectional ? "url(#arrow-" + (d.source.type || "core") + ")" : null)
+        .attr("d", d => {
+          const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+          const dr = Math.sqrt(dx * dx + dy * dy) * 1.8;
+          return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + d.target.x + "," + d.target.y;
+        });
+
+      // 连线 label
+      linkG.selectAll("text").data(links.filter(l => l.label)).enter().append("text")
+        .attr("class", "arch-node-label")
+        .attr("x", d => (d.source.x + d.target.x) / 2)
+        .attr("y", d => (d.source.y + d.target.y) / 2 - 6)
+        .attr("fill", d => d.highlighted ? "#a78bfa" : (isDark ? "#64748b" : "#94a3b8"))
+        .attr("font-size", "9px")
+        .text(d => d.label);
+
+      // 节点
+      const nodeG = svg.append("g").attr("class", "nodes");
+      const nodeEls = nodeG.selectAll("g").data(nodes).enter().append("g")
+        .attr("class", "arch-node-group")
+        .attr("transform", d => "translate(" + d.x + "," + d.y + ")");
+
+      const R = 26;
+      nodeEls.append("circle")
+        .attr("class", "arch-node-circle")
+        .attr("r", d => d.special ? 32 : R)
+        .attr("fill", d => d.color || TYPE_COLOR[d.type])
+        .attr("fill", d => {
+          const c = TYPE_COLOR[d.type];
+          return c;
+        })
+        .attr("fill-opacity", isDark ? 0.18 : 0.14)
+        .attr("stroke", d => TYPE_COLOR[d.type])
+        .attr("stroke-width", d => d.id === "LOOP" ? 2.5 : 1.5)
+        .style("color", d => TYPE_COLOR[d.type]);
+
+      // 内部小图标圆
+      nodeEls.append("circle")
+        .attr("r", d => d.special ? 22 : 18)
+        .attr("fill", d => TYPE_COLOR[d.type])
+        .attr("fill-opacity", isDark ? 0.95 : 0.9);
+
+      nodeEls.append("text").attr("class", "arch-node-icon")
+        .attr("dy", "0.35em").attr("fill", "#fff").text(d => d.icon);
+
+      nodeEls.append("text").attr("class", "arch-node-label")
+        .attr("y", d => (d.special ? 46 : 40)).attr("dy", "0.35em")
+        .attr("fill", isDark ? "#e2e8f0" : "#334155")
+        .text(d => d.label);
+
+      // 拖拽
+      const drag = d3.drag()
+        .on("start", (event, d) => { d.fx = d.x; d.fy = d.y; })
+        .on("drag", (event, d) => {
+          d.fx = event.x; d.fy = event.y; d.x = event.x; d.y = event.y;
+          d3.select(event.sourceEvent.target.closest("g")).attr("transform", "translate(" + d.x + "," + d.y + ")");
+          // 更新关联连线
+          linkEls.attr("d", l => {
+            const sx = l.source.x, sy = l.source.y, tx = l.target.x, ty = l.target.y;
+            const dx = tx - sx, dy = ty - sy, dr = Math.sqrt(dx * dx + dy * dy) * 1.8;
+            return "M" + sx + "," + sy + "A" + dr + "," + dr + " 0 0,1 " + tx + "," + ty;
+          });
+        })
+        .on("end", (event, d) => { d.fx = null; d.fy = null; });
+      nodeEls.call(drag);
+
+      // 交互：hover 高亮
+      const tooltip = d3.select("#arch-tooltip");
+      let lockedNode = null;
+      nodeEls.on("mouseenter", function (event, d) {
+        if (lockedNode) return;
+        highlightNode(d);
+        showTooltip(event, d);
+      }).on("mousemove", function (event, d) {
+        if (lockedNode) return;
+        positionTooltip(event);
+      }).on("mouseleave", function () {
+        if (lockedNode) return;
+        clearHighlight();
+        tooltip.style("opacity", 0);
+      }).on("click", function (event, d) {
+        event.stopPropagation();
+        lockedNode = (lockedNode && lockedNode.id === d.id) ? null : d;
+        if (lockedNode) { highlightNode(d); showTooltip(event, d); }
+        else { clearHighlight(); tooltip.style("opacity", 0); }
+      });
+
+      svg.on("click", function () {
+        lockedNode = null; clearHighlight(); tooltip.style("opacity", 0);
+      });
+
+      function highlightNode(d) {
+        const connected = new Set([d.id]);
+        links.forEach(l => {
+          if (l.source.id === d.id) connected.add(l.target.id);
+          if (l.target.id === d.id) connected.add(l.source.id);
+        });
+        nodeEls.classed("dimmed", n => !connected.has(n.id));
+        linkEls.classed("highlighted", l => l.source.id === d.id || l.target.id === d.id)
+               .classed("dimmed", l => !(l.source.id === d.id || l.target.id === d.id));
+      }
+      function clearHighlight() {
+        nodeEls.classed("dimmed", false);
+        linkEls.classed("dimmed", false).classed("highlighted", l => !!l.highlighted);
+      }
+      function showTooltip(event, d) {
+        tooltip.html(
+          '<div class="font-medium mb-1 flex items-center gap-1.5">' +
+          '<span>' + d.icon + '</span><span>' + escapeHtml(d.label) + '</span>' +
+          '<span class="text-[9px] px-1.5 py-0.5 rounded-full" style="background:' + TYPE_COLOR[d.type] + '33;color:' + TYPE_COLOR[d.type] + '">' + TYPE_LABEL[d.type] + '</span></div>' +
+          '<div class="text-slate-400 leading-relaxed">' + escapeHtml(d.detail) + '</div>'
+        ).style("opacity", 1);
+        positionTooltip(event);
+      }
+      function positionTooltip(event) {
+        const rect = container.getBoundingClientRect();
+        let x = event.clientX - rect.left + 14;
+        let y = event.clientY - rect.top + 14;
+        if (x + 260 > rect.width) x = event.clientX - rect.left - 274;
+        if (y + 80 > rect.height) y = event.clientY - rect.top - 90;
+        tooltip.style("left", x + "px").style("top", y + "px");
+      }
+
+      // 缩放
+      let zoomState = 1;
+      const gAll = svg.selectAll("g");
+      // 用全局 transform 缩放（包裹所有 g）
+      const wrapper = svg.insert("g", ":first-child");
+      // 实际我们直接对 svg viewBox 操作更稳妥
+      applyZoom();
+      function applyZoom() {
+        const nw = W / zoomState, nh = H / zoomState;
+        const nx = (W - nw) / 2, ny = (H - nh) / 2;
+        svg.attr("viewBox", nx + " " + ny + " " + nw + " " + nh);
+      }
+      window.__archZoom = function (delta) {
+        zoomState = Math.max(0.5, Math.min(2.5, zoomState + delta));
+        applyZoom();
+      };
+      window.__archZoomReset = function () { zoomState = 1; applyZoom(); };
+    };
+
+    document.getElementById("zin").addEventListener("click", () => window.__archZoom && window.__archZoom(0.15));
+    document.getElementById("zout").addEventListener("click", () => window.__archZoom && window.__archZoom(-0.15));
+    document.getElementById("zreset").addEventListener("click", () => window.__archZoomReset && window.__archZoomReset());
+    document.getElementById("arch-container").addEventListener("wheel", e => {
+      if (e.ctrlKey) { e.preventDefault(); window.__archZoom && window.__archZoom(e.deltaY < 0 ? 0.1 : -0.1); }
     }, { passive: false });
 
-    // ---- Tabs ----
-    document.querySelectorAll(".tab-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const tab = btn.dataset.tab;
-        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("tab-active"));
-        btn.classList.add("tab-active");
-        document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
-        document.getElementById("tab-" + tab).classList.remove("hidden");
-        if (tab === "architecture" && window.mermaid) renderDiagram();
+    // 图例
+    document.getElementById("legend").innerHTML = Object.keys(TYPE_COLOR).map(t =>
+      '<span class="inline-flex items-center gap-1.5 text-xs text-slate-400"><span class="inline-block h-2.5 w-2.5 rounded-full" style="background:' + TYPE_COLOR[t] + '"></span>' + TYPE_LABEL[t] + '</span>'
+    ).join("");
+
+    // ============================================================
+    // 标签页切换
+    // ============================================================
+    function showPanel(id) {
+      document.querySelectorAll(".tab-btn").forEach(b => {
+        const active = b.dataset.tab === id;
+        b.classList.toggle("tab-active", active);
+        b.classList.toggle("text-slate-300", !active);
       });
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+      document.getElementById("tab-" + id).classList.remove("hidden");
+      // 触发入场动画
+      const panel = document.getElementById("tab-" + id);
+      panel.querySelectorAll(".fade-up").forEach((el, i) => {
+        el.classList.remove("show");
+        setTimeout(() => el.classList.add("show"), i * 60);
+      });
+      if (id === "architecture" && window.__renderArch) setTimeout(() => window.__renderArch(), 50);
+    }
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => showPanel(btn.dataset.tab));
     });
 
-    // ---- Compare table ----
+    // ============================================================
+    // 对比表
+    // ============================================================
     document.getElementById("compare-rows").innerHTML = ARTIFACT_DATA.compareRows.map(r => `
-      <tr>
-        <td class="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-300 align-top whitespace-nowrap">${escapeHtml(r.dim)}</td>
-        <td class="px-4 py-2.5 text-slate-500 dark:text-slate-400 align-top">${escapeHtml(r.fw)}</td>
-        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200 align-top">${escapeHtml(r.hs)}</td>
+      <tr class="hover:bg-white/[0.02] transition">
+        <td class="px-5 py-3 font-medium text-slate-300 align-top whitespace-nowrap">${escapeHtml(r.dim)}</td>
+        <td class="px-5 py-3 text-slate-400 align-top">${escapeHtml(r.fw)}</td>
+        <td class="px-5 py-3 text-slate-200 align-top">${escapeHtml(r.hs)}</td>
       </tr>`).join("");
 
-    // ---- Layers grid ----
-    const LAYER_STYLE = {
-      indigo:  { border: "border-indigo-200 dark:border-indigo-900/50",  bg: "bg-indigo-50/50 dark:bg-indigo-950/20",  text: "text-indigo-600 dark:text-indigo-400" },
-      rose:    { border: "border-rose-200 dark:border-rose-900/50",      bg: "bg-rose-50/50 dark:bg-rose-950/20",      text: "text-rose-600 dark:text-rose-400" },
-      amber:   { border: "border-amber-200 dark:border-amber-900/50",    bg: "bg-amber-50/50 dark:bg-amber-950/20",    text: "text-amber-600 dark:text-amber-400" },
-      emerald: { border: "border-emerald-200 dark:border-emerald-900/50",bg: "bg-emerald-50/50 dark:bg-emerald-950/20",text: "text-emerald-600 dark:text-emerald-400" }
-    };
-    document.getElementById("layers-grid").innerHTML = ARTIFACT_DATA.layers.map(l => {
-      const s = LAYER_STYLE[l.color];
-      return `
-      <div class="rounded-xl border ${s.border} ${s.bg} p-5">
+    // ============================================================
+    // 分层详解
+    // ============================================================
+    document.getElementById("layers-grid").innerHTML = ARTIFACT_DATA.layers.map(l => `
+      <div class="glass rounded-2xl p-5 fade-up" style="border-left: 3px solid ${l.color}">
         <div class="flex items-center gap-2 mb-1">
-          <i data-lucide="${l.icon}" class="h-4 w-4 ${s.text}"></i>
+          <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg" style="background:${l.color}22"><i data-lucide="${l.icon}" class="h-4 w-4" style="color:${l.color}"></i></span>
           <span class="font-medium">${escapeHtml(l.title)}</span>
         </div>
-        <p class="text-xs ${s.text} mb-3">${escapeHtml(l.role)}</p>
-        <ul class="space-y-1.5">
-          ${l.points.map(p => `<li class="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400"><span class="${s.text} mt-0.5">▸</span><span>${escapeHtml(p)}</span></li>`).join("")}
+        <p class="text-xs mb-3" style="color:${l.color}">${escapeHtml(l.role)}</p>
+        <ul class="space-y-2">
+          ${l.points.map(p => `<li class="flex items-start gap-2 text-xs text-slate-400"><span style="color:${l.color}" class="mt-0.5">▸</span><span>${escapeHtml(p)}</span></li>`).join("")}
         </ul>
-      </div>`;
-    }).join("");
+      </div>`).join("");
 
-    // ---- Skeleton tab ----
+    // ============================================================
+    // 代码骨架
+    // ============================================================
     document.getElementById("dir-tree").textContent = ARTIFACT_DATA.dirTree;
     document.getElementById("entry-code").textContent = ARTIFACT_DATA.entryCode;
 
-    // ---- Key points ----
+    // ============================================================
+    // 核心论点
+    // ============================================================
     document.getElementById("keypoints-grid").innerHTML = ARTIFACT_DATA.keypoints.map(k => `
-      <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+      <div class="glass rounded-2xl p-5 fade-up">
         <div class="flex items-center gap-2 mb-2">
-          <i data-lucide="${k.icon}" class="h-4 w-4 text-indigo-600 dark:text-indigo-400"></i>
+          <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/20"><i data-lucide="${k.icon}" class="h-4 w-4 text-indigo-400"></i></span>
           <span class="font-medium text-sm">${escapeHtml(k.title)}</span>
         </div>
-        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">${escapeHtml(k.desc)}</p>
+        <p class="text-xs text-slate-400 leading-relaxed">${escapeHtml(k.desc)}</p>
       </div>`).join("");
 
-    renderDiagram();
+    // ============================================================
+    // 初始化
+    // ============================================================
+    showPanel("architecture");
     if (window.lucide) lucide.createIcons();
+
+    // 响应式重绘
+    let resizeTimer;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (window.__renderArch && !document.getElementById("tab-architecture").classList.contains("hidden")) window.__renderArch(); }, 200);
+    });
   </script>
 </body>
 </html>
