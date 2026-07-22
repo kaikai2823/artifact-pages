@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>架构演进：从 Framework 到 Harness</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">@custom-variant dark (&:where(.dark, .dark *));</style>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    html { color-scheme: light dark; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .tab-active { background: rgb(79 70 229); color: white; }
+    .dark .tab-active { background: rgb(99 102 241); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased">
+
+  <header class="sticky top-0 z-20 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-2 min-w-0">
+        <span id="emoji" class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white"><i data-lucide="network" class="h-4 w-4"></i></span>
+        <span id="title" class="font-semibold truncate">架构演进：从 Framework 到 Harness</span>
+        <span id="version" class="text-xs text-slate-400"></span>
+      </div>
+      <button id="themeToggle" type="button" aria-label="Toggle dark mode"
+        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+        <i data-lucide="moon" class="h-4 w-4 dark:hidden"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+    <!-- 课程信息条 -->
+    <div class="mb-6 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50 dark:bg-indigo-950/30 px-4 py-3 text-sm">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span class="font-medium">📚 《从 0 开始构建 Agent Harness》</span>
+        <span class="text-slate-500 dark:text-slate-400">第一讲 · Tony Bai</span>
+        <span class="text-slate-500 dark:text-slate-400">核心命题：<span class="font-medium text-indigo-600 dark:text-indigo-400">框架层正在坍塌，驾驭工程正在崛起</span></span>
+      </div>
+    </div>
+
+    <!-- 标签页切换 -->
+    <div class="mb-6 flex flex-wrap gap-2">
+      <button data-tab="architecture" class="tab-btn tab-active inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 transition">
+        <i data-lucide="git-fork" class="h-3.5 w-3.5"></i>四层架构蓝图
+      </button>
+      <button data-tab="compare" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="scale" class="h-3.5 w-3.5"></i>Framework vs Harness
+      </button>
+      <button data-tab="layers" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="layers" class="h-3.5 w-3.5"></i>分层详解
+      </button>
+      <button data-tab="skeleton" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="folder-tree" class="h-3.5 w-3.5"></i>代码骨架
+      </button>
+      <button data-tab="keypoints" class="tab-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition">
+        <i data-lucide="lightbulb" class="h-3.5 w-3.5"></i>核心论点
+      </button>
+    </div>
+
+    <!-- TAB 1: 架构图 -->
+    <section id="tab-architecture" class="tab-panel">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200 dark:border-slate-800">
+            <span class="text-sm font-medium">go-tiny-claw 四层架构（Main Loop 运行时）</span>
+            <div class="flex items-center gap-1">
+              <button id="zout" type="button" aria-label="Zoom out" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"><i data-lucide="zoom-out" class="h-4 w-4"></i></button>
+              <button id="zreset" type="button" class="inline-flex h-8 px-2 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs">Reset</button>
+              <button id="zin" type="button" aria-label="Zoom in" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"><i data-lucide="zoom-in" class="h-4 w-4"></i></button>
+            </div>
+          </div>
+          <div id="stage" class="overflow-auto p-4" style="max-height: 70vh;">
+            <div id="diagram" class="origin-top-left transition-transform"></div>
+          </div>
+        </div>
+        <aside class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+          <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
+            <span class="text-sm font-medium">组件清单</span>
+          </div>
+          <div class="divide-y divide-slate-100 dark:divide-slate-800" id="components"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- TAB 2: 对比 -->
+    <section id="tab-compare" class="tab-panel hidden">
+      <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+        <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800"><span class="text-sm font-medium">传统 Framework vs 现代 Harness</span></div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400">
+              <tr>
+                <th class="text-left px-4 py-2.5 font-medium">维度</th>
+                <th class="text-left px-4 py-2.5 font-medium text-rose-600 dark:text-rose-400">Framework（框架）</th>
+                <th class="text-left px-4 py-2.5 font-medium text-emerald-600 dark:text-emerald-400">Harness（驾驭工程）</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800" id="compare-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 三大革命性转变 -->
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="repeat" class="h-4 w-4 text-indigo-600 dark:text-indigo-400"></i><span class="font-medium text-sm">控制反转（IoC）</span></div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">业务流程控制权从「代码」完全转移到大模型的「实时推理」。代码只提供物理定律（文件读写、沙箱），不干涉任务走向。</p>
+        </div>
+        <div class="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="shield-alert" class="h-4 w-4 text-amber-600 dark:text-amber-400"></i><span class="font-medium text-sm">防线前移</span></div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">大模型是自由的，就可能犯错/搞破坏。核心代码集中在 Middleware（防搞破坏）和 Compactor（防内存撑爆）。</p>
+        </div>
+        <div class="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="eye" class="h-4 w-4 text-emerald-600 dark:text-emerald-400"></i><span class="font-medium text-sm">状态透明</span></div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">循环只依赖单一数据结构——不断累加的 Context 消息列表。没有任何隐式的树节点或图节点变量。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 分层详解 -->
+    <section id="tab-layers" class="tab-panel hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="layers-grid"></div>
+    </section>
+
+    <!-- TAB 4: 代码骨架 -->
+    <section id="tab-skeleton" class="tab-panel hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2"><i data-lucide="folder-tree" class="h-4 w-4 text-indigo-600 dark:text-indigo-400"></i><span class="text-sm font-medium">项目目录布局</span></div>
+          <pre class="p-4 text-xs overflow-x-auto leading-relaxed"><code id="dir-tree"></code></pre>
+        </div>
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2"><i data-lucide="terminal" class="h-4 w-4 text-emerald-600 dark:text-emerald-400"></i><span class="text-sm font-medium">入口启动伪代码（main.go）</span></div>
+          <pre class="p-4 text-xs overflow-x-auto leading-relaxed"><code id="entry-code"></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: 核心论点 -->
+    <section id="tab-keypoints" class="tab-panel hidden">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" id="keypoints-grid"></div>
+      <!-- 思考题 -->
+      <div class="rounded-xl border border-violet-200 dark:border-violet-900/50 bg-violet-50/50 dark:bg-violet-950/20 p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="help-circle" class="h-5 w-5 text-violet-600 dark:text-violet-400"></i>
+          <span class="font-medium">课后思考题</span>
+        </div>
+        <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-2">经典 OS 在内存（RAM）不足时会触发 <span class="font-mono text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">OOM Killer</span> 强杀进程，或把不常用内存页置换到磁盘（Swap）。</p>
+        <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">结合 Harness 理念，当大模型上下文窗口逼近极限（如 128k Tokens）时，go-tiny-claw 引擎应采取哪些类似 OS 的策略，来避免 Agent 因 API 报错而彻底崩溃失忆？</p>
+        <p class="mt-3 text-xs text-violet-600 dark:text-violet-400 italic">提示 → 答案就在后续「上下文工程层」的 Token 监控与阶梯压缩器中。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-200 dark:border-slate-800 mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-xs text-slate-400 flex items-center justify-between">
+      <span>kaiclaw · 第一讲梳理 · 基于 artifact 技能生成</span>
+      <span id="footer-meta"></span>
+    </div>
+  </footer>
+
+  <script>
+    // ============================================================
+    // ARTIFACT META
+    // ============================================================
+    const ARTIFACT_META = {
+      title: "架构演进：从 Framework 到 Harness",
+      emoji: "🧭",
+      version: 1,
+      createdAt: "2026-07-23T00:00:00",
+      updatedAt: "2026-07-23T00:00:00"
+    };
+
+    // ============================================================
+    // ARTIFACT DATA — edit this block to refresh the page.
+    // ============================================================
+    const ARTIFACT_DATA = {
+      generatedAt: "2026-07-23",
+      title: "架构演进：从 Framework 到 Harness",
+      // go-tiny-claw 四层架构 Main Loop 图
+      diagram: `flowchart TB
+        subgraph Entry["入口交互层"]
+          CLI["终端 CLI 输入"]
+          FEISHU["飞书机器人接入"]
+          HITL["人工审批 Human-in-the-Loop<br/>异步回调"]
+        end
+        subgraph Core["核心引擎层（心脏）"]
+          LOOP["Main Loop<br/>ReAct 循环"]
+          THINK["Thinking 模块<br/>强制慢思考"]
+          ADAPTER["大模型适配器<br/>抹平 Claude/OpenAI 差异"]
+        end
+        subgraph Context["上下文工程层（内存管理器）"]
+          PROMPT["Prompt 动态组装器<br/>读取 AGENTS.md"]
+          COMPACT["Token 监控与<br/>阶梯压缩器"]
+          REMIND["运行时事件提醒注入"]
+          MEM["基于文件系统的<br/>状态与记忆 TODO.md"]
+        end
+        subgraph Tools["工具与执行层（四肢）"]
+          REG["动态 ToolRegistry"]
+          TOOL["极简工具集<br/>read/write/edit/bash"]
+          MW["Middleware<br/>拦截危险命令 + 审批"]
+        end
+        LLM["🧠 大模型 = CPU<br/>自主规划与推理"]
+
+        CLI --> LOOP
+        FEISHU --> LOOP
+        HITL -.-> MW
+        LOOP <-->|推理/响应| LLM
+        LOOP --> THINK
+        LOOP --> ADAPTER
+        LOOP --> PROMPT
+        LOOP --> COMPACT
+        LOOP --> REMIND
+        LOOP --> MEM
+        LOOP --> REG
+        REG --> TOOL
+        TOOL --> MW
+        MW -->|执行| PHYSICAL["🌍 物理世界"]`,
+
+      components: [
+        { name: "Main Loop",          type: "core",     desc: "系统心脏。维持 ReAct 循环（思考→行动→观察），是 Agent 的心跳。" },
+        { name: "大模型 (CPU)",       type: "external", desc: "拥有极强自主规划能力的 CPU。不需要代码规定流程，靠实时推理决定走向。" },
+        { name: "Thinking 模块",      type: "core",     desc: "在行动前强制模型进行慢思考，剥离独立的 Thinking 阶段。" },
+        { name: "大模型适配器",        type: "adapter",  desc: "抹平 Claude、OpenAI 兼容等厂商 API 差异的「大脑接口」。" },
+        { name: "Prompt 动态组装器",   type: "context",  desc: "动态拼装模块化的系统规则（如读取 AGENTS.md），告别面条代码。" },
+        { name: "Token 压缩器",       type: "context",  desc: "像 OS 内存回收器，盯 Token 水位线触发阶梯压缩（ContextCompaction）。" },
+        { name: "事件提醒注入",        type: "context",  desc: "防走神利器，在模型决策前一刻注入干预指令（SystemReminders）。" },
+        { name: "文件系统记忆",        type: "context",  desc: "极简哲学核心：抛弃内部变量，直接把进度写在本地 TODO.md。" },
+        { name: "ToolRegistry",       type: "tools",    desc: "动态工具注册表，配合极简工具集组合出无限可能。" },
+        { name: "极简工具集",          type: "tools",    desc: "read/write/edit/bash 四件套，大道至简的 YOLO 执行哲学。" },
+        { name: "Middleware",         type: "tools",    desc: "死守大门：拦截高危命令、对接飞书人工审批，防线前移。" },
+        { name: "入口交互层",          type: "entry",    desc: "引擎触角：CLI 输入、飞书接入，含 Human-in-the-loop 异步回调。" }
+      ],
+
+      // Framework vs Harness 对比行
+      compareRows: [
+        { dim: "诞生时代",      fw: "GPT-3 时代，模型缺乏规划与工具调用能力",            hs: "Claude 3.5 / GPT-4o 时代，模型成为有自主规划能力的 CPU" },
+        { dim: "核心结构",      fw: "链（Chain）+ 有向无环图（DAG）",                  hs: "无限循环（Main Loop）+ 事件驱动拦截器（Middleware）" },
+        { dim: "逻辑流向",      fw: "硬编码：A→B→C，代码配置边（Edge）",              hs: "动态：模型自主推导下一步，代码只提供物理定律" },
+        { dim: "控制权归属",    fw: "Go/Python 代码决定流程走向",                     hs: "大模型实时推理决定走向（控制反转 IoC）" },
+        { dim: "状态管理",      fw: "隐式、人类难读的复杂状态机",                      hs: "单一透明的 Context 消息列表，无隐式图节点" },
+        { dim: "异常处理",      fw: "缺乏弹性回退，常直接抛异常致进程崩溃",            hs: "Middleware 防线前移，错误自愈提示模板注入" },
+        { dim: "死循环应对",    fw: "图中间开发者无法插手干预",                        hs: "SystemReminders + Middleware 主动干预" },
+        { dim: "核心代码集中点", fw: "节点编排、边的配置",                             hs: "Middleware（防搞破坏）+ Compactor（防撑爆）" },
+        { dim: "类比",          fw: "开发者手写的流水线",                              hs: "为大模型编写的微型操作系统（OS）" }
+      ],
+
+      // 四层详解
+      layers: [
+        { color: "indigo", icon: "door-open",    title: "入口交互层",     role: "引擎对外的触角",
+          points: ["终端命令行（CLI）输入", "接入飞书机器人", "人工审批（Human-in-the-loop）异步回调机制"] },
+        { color: "rose",   icon: "heart-pulse",  title: "核心引擎层（心脏）", role: "系统的控制中枢",
+          points: ["Main Loop 维持 ReAct 循环", "大模型适配器抹平 Claude/OpenAI 差异", "Thinking 模块强制慢思考"] },
+        { color: "amber",  icon: "database",     title: "上下文工程层（内存）", role: "决定 Agent 能跑多远",
+          points: ["Prompt 动态组装器（读 AGENTS.md）", "Token 监控与阶梯压缩器", "运行时事件提醒注入", "文件系统状态与记忆 TODO.md"] },
+        { color: "emerald",icon: "wrench",       title: "工具与执行层（四肢）", role: "改变物理世界的组件",
+          points: ["动态 ToolRegistry", "极简工具集 read/write/edit/bash", "Middleware 拦截危险命令 + 审批"] }
+      ],
+
+      // 目录树
+      dirTree: `go-tiny-claw/
+├── cmd/
+│   └── claw/
+│       └── main.go      # 程序入口
+├── internal/
+│   ├── engine/          # MainLoop 核心实现
+│   ├── provider/        # 大模型接口抽象 + 厂商 SDK
+│   ├── context/         # Token 监控、Prompt 动态组装
+│   ├── tools/           # 工具注册表、Middleware、极简工具
+│   ├── memory/          # 基于文件系统的记忆状态存取
+│   └── feishu/          # 飞书机器人交互回调
+├── go.mod
+└── README.md`,
+
+      // 入口代码
+      entryCode: `package main
+
+import (
+    "fmt"
+    "log"
+)
+
+func main() {
+    fmt.Println("🚀 欢迎来到 go-tiny-claw 引擎启动序列")
+
+    // TODO: 1. 初始化模型 Provider (大脑)
+    // provider := provider.NewClaudeProvider(...)
+
+    // TODO: 2. 初始化 Tool Registry (手脚)
+    // registry := tools.NewRegistry()
+    // registry.Register(tools.NewBashTool())
+
+    // TODO: 3. 初始化上下文管理器 (内存管理器)
+    // ctxManager := context.NewManager(...)
+
+    // TODO: 4. 组装并启动核心 Engine (操作系统心脏)
+    // engine := engine.NewAgentEngine(provider, registry, ctxManager)
+    // err := engine.Run("帮我检查当前目录文件并输出 README 大纲")
+    // if err != nil { log.Fatalf("引擎崩溃: %v", err) }
+
+    log.Println("架构蓝图搭建完毕，等待各核心模块注入！")
+}`,
+
+      // 核心论点
+      keypoints: [
+        { icon: "break",       title: "突破「调包」局限",   desc: "生产中遇到上下文溢出、死循环、行为失控时，改 Prompt 或依赖厚重 Framework 往往无济于事——静态 DAG 无法应对千变万化的真实世界。" },
+        { icon: "cpu",         title: "Harness 的本质",     desc: "Agent 的尽头是 OS。大模型=CPU，Context=内存。Harness 工程就是为大模型编写微型 OS：调度 Main Loop、回收 Context 内存、安全管控工具、处理中断。" },
+        { icon: "map",         title: "确立架构蓝图",       desc: "推导出四层架构（入口交互/核心引擎/上下文工程/工具执行），用 Go 搭建高内聚工程骨架，写下串联各大模块的启动伪代码。" }
+      ]
+    };
+
+    const TYPE_BADGE = {
+      core:     "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+      adapter:  "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+      context:  "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+      tools:    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+      entry:    "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300",
+      external: "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+    };
+
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+    // ---- Theme ----
+    function safeStore(key, val) { try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch { return null; } }
+    (function () { try { if (safeStore("artifact-theme") === "light") document.documentElement.classList.remove("dark"); } catch {} })();
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      safeStore("artifact-theme", isDark ? "dark" : "light");
+      if (window.mermaid) renderDiagram();
+    });
+
+    // ---- Header + footer ----
+    document.getElementById("title").textContent = ARTIFACT_DATA.title;
+    document.getElementById("version").textContent = "v" + ARTIFACT_META.version;
+    document.getElementById("footer-meta").textContent = "v" + ARTIFACT_META.version + " · " + ARTIFACT_META.createdAt.slice(0,10);
+
+    // ---- Components panel ----
+    document.getElementById("components").innerHTML = ARTIFACT_DATA.components.map(c => `
+      <div class="px-4 py-3">
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-sm">${escapeHtml(c.name)}</span>
+          <span class="text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 ${TYPE_BADGE[c.type] || TYPE_BADGE.external}">${escapeHtml(c.type)}</span>
+        </div>
+        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">${escapeHtml(c.desc)}</p>
+      </div>`).join("");
+
+    // ---- Mermaid ----
+    let seq = 0;
+    function renderDiagram() {
+      if (!window.mermaid) return;
+      const host = document.getElementById("diagram");
+      const isDark = document.documentElement.classList.contains("dark");
+      mermaid.initialize({ startOnLoad: false, theme: isDark ? "dark" : "default", securityLevel: "loose", flowchart: { useMaxWidth: true, htmlLabels: true } });
+      const id = "m" + (seq++);
+      mermaid.render(id, ARTIFACT_DATA.diagram)
+        .then(({ svg }) => { host.innerHTML = svg; })
+        .catch(err => { host.innerHTML = `<p class="text-rose-500 text-sm">Diagram error: ${escapeHtml(err.message || err)}</p>`; });
+    }
+
+    // ---- Zoom ----
+    let zoom = 1;
+    const diagramEl = document.getElementById("diagram");
+    const applyZoom = () => { diagramEl.style.transform = `scale(${zoom})`; };
+    const clamp = z => Math.max(0.3, Math.min(3, z));
+    document.getElementById("zin").addEventListener("click", () => { zoom = clamp(zoom + 0.15); applyZoom(); });
+    document.getElementById("zout").addEventListener("click", () => { zoom = clamp(zoom - 0.15); applyZoom(); });
+    document.getElementById("zreset").addEventListener("click", () => { zoom = 1; applyZoom(); });
+    document.getElementById("stage").addEventListener("wheel", e => {
+      if (e.ctrlKey) { e.preventDefault(); zoom = clamp(zoom + (e.deltaY < 0 ? 0.1 : -0.1)); applyZoom(); }
+    }, { passive: false });
+
+    // ---- Tabs ----
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tab = btn.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("tab-active"));
+        btn.classList.add("tab-active");
+        document.querySelectorAll(".tab-panel").forEach(p => p.classList.add("hidden"));
+        document.getElementById("tab-" + tab).classList.remove("hidden");
+        if (tab === "architecture" && window.mermaid) renderDiagram();
+      });
+    });
+
+    // ---- Compare table ----
+    document.getElementById("compare-rows").innerHTML = ARTIFACT_DATA.compareRows.map(r => `
+      <tr>
+        <td class="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-300 align-top whitespace-nowrap">${escapeHtml(r.dim)}</td>
+        <td class="px-4 py-2.5 text-slate-500 dark:text-slate-400 align-top">${escapeHtml(r.fw)}</td>
+        <td class="px-4 py-2.5 text-slate-700 dark:text-slate-200 align-top">${escapeHtml(r.hs)}</td>
+      </tr>`).join("");
+
+    // ---- Layers grid ----
+    const LAYER_STYLE = {
+      indigo:  { border: "border-indigo-200 dark:border-indigo-900/50",  bg: "bg-indigo-50/50 dark:bg-indigo-950/20",  text: "text-indigo-600 dark:text-indigo-400" },
+      rose:    { border: "border-rose-200 dark:border-rose-900/50",      bg: "bg-rose-50/50 dark:bg-rose-950/20",      text: "text-rose-600 dark:text-rose-400" },
+      amber:   { border: "border-amber-200 dark:border-amber-900/50",    bg: "bg-amber-50/50 dark:bg-amber-950/20",    text: "text-amber-600 dark:text-amber-400" },
+      emerald: { border: "border-emerald-200 dark:border-emerald-900/50",bg: "bg-emerald-50/50 dark:bg-emerald-950/20",text: "text-emerald-600 dark:text-emerald-400" }
+    };
+    document.getElementById("layers-grid").innerHTML = ARTIFACT_DATA.layers.map(l => {
+      const s = LAYER_STYLE[l.color];
+      return `
+      <div class="rounded-xl border ${s.border} ${s.bg} p-5">
+        <div class="flex items-center gap-2 mb-1">
+          <i data-lucide="${l.icon}" class="h-4 w-4 ${s.text}"></i>
+          <span class="font-medium">${escapeHtml(l.title)}</span>
+        </div>
+        <p class="text-xs ${s.text} mb-3">${escapeHtml(l.role)}</p>
+        <ul class="space-y-1.5">
+          ${l.points.map(p => `<li class="flex items-start gap-2 text-xs text-slate-600 dark:text-slate-400"><span class="${s.text} mt-0.5">▸</span><span>${escapeHtml(p)}</span></li>`).join("")}
+        </ul>
+      </div>`;
+    }).join("");
+
+    // ---- Skeleton tab ----
+    document.getElementById("dir-tree").textContent = ARTIFACT_DATA.dirTree;
+    document.getElementById("entry-code").textContent = ARTIFACT_DATA.entryCode;
+
+    // ---- Key points ----
+    document.getElementById("keypoints-grid").innerHTML = ARTIFACT_DATA.keypoints.map(k => `
+      <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="${k.icon}" class="h-4 w-4 text-indigo-600 dark:text-indigo-400"></i>
+          <span class="font-medium text-sm">${escapeHtml(k.title)}</span>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">${escapeHtml(k.desc)}</p>
+      </div>`).join("");
+
+    renderDiagram();
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
